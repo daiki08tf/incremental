@@ -1,5 +1,485 @@
 <title>漂流コロニー</title>
-<link rel="stylesheet" href="style.css" />
+<style>
+/* =========================================================
+   漂流コロニー -Ashfall- : ドット絵風スタイル
+   画像素材は使わず、CSSの図形・box-shadowのみで表現する。
+   ========================================================= */
+
+:root {
+  color-scheme: dark;
+  --bg: #1b1712;
+  --bg-panel: #26201a;
+  --bg-panel-alt: #2f2820;
+  --border: #59493a;
+  --border-light: #7a6650;
+  --text: #e8dcc8;
+  --text-dim: #a7967f;
+  --accent: #e08a3c;
+  --accent-dim: #8a5a2a;
+  --wood: #b8804a;
+  --metal: #9aa5ad;
+  --food: #d7c15a;
+  --power: #e8d34a;
+  --components: #6fb3c9;
+  --danger: #c85c4a;
+  --ok: #6fbf6f;
+  --font-main: "Courier New", "MS Gothic", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-main);
+  background: var(--bg);
+  color: var(--text);
+  image-rendering: pixelated;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* ---------- レイアウト ---------- */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--bg-panel);
+  border-bottom: 3px solid var(--border);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.2rem;
+  letter-spacing: 1px;
+}
+
+.title-sub {
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.planet-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--bg-panel-alt);
+  border: 2px solid var(--border-light);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 240px 1fr 300px;
+  gap: 12px;
+  padding: 12px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  background: var(--bg-panel);
+  border: 3px solid var(--border);
+  padding: 10px;
+}
+
+.panel-title {
+  margin: 6px 0;
+  font-size: 0.85rem;
+  color: var(--accent);
+  border-bottom: 2px dashed var(--border-light);
+  padding-bottom: 4px;
+}
+
+/* ---------- 資源リスト ---------- */
+
+.resource-list {
+  list-style: none;
+  margin: 0 0 10px 0;
+  padding: 0;
+}
+
+.resource-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.resource-list .amount {
+  margin-left: auto;
+  font-weight: bold;
+}
+
+.resource-list .rate {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+}
+
+/* ---------- クリックエリア ---------- */
+
+.click-area {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 10px;
+  background: var(--bg-panel-alt);
+  border: 3px solid var(--border-light);
+  color: var(--text);
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.click-area:active {
+  transform: translateY(2px);
+  background: var(--accent-dim);
+}
+
+.click-power {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+/* ---------- ボタン共通 ---------- */
+
+.btn {
+  background: var(--bg-panel-alt);
+  border: 2px solid var(--border-light);
+  color: var(--text);
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  margin: 3px 0;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-small {
+  width: 100%;
+}
+
+.btn-tiny {
+  width: 28px;
+  padding: 2px 0;
+}
+
+.btn-warning {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* ---------- 建物リスト ---------- */
+
+.building-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.building-item {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.building-item .b-name {
+  font-size: 0.85rem;
+}
+
+.building-item .b-detail {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+/* ---------- 生存者 ---------- */
+
+.survivor-box {
+  margin-bottom: 6px;
+}
+
+.survivor-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.survivor-assign {
+  margin-top: 6px;
+  font-size: 0.75rem;
+}
+
+.assign-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.assign-row .assign-name {
+  flex: 1;
+}
+
+/* ---------- プレステージ ---------- */
+
+.prestige-box {
+  margin-bottom: 10px;
+}
+
+.prestige-req {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.prestige-carry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  margin-bottom: 6px;
+}
+
+.knowledge-display {
+  margin: 8px 0;
+  font-size: 0.85rem;
+  color: var(--components);
+}
+
+.upgrade-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.upgrade-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ---------- 実績 ---------- */
+
+.achievement-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.achievement-item {
+  font-size: 0.75rem;
+  padding: 4px 2px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.achievement-item.unlocked {
+  color: var(--ok);
+}
+
+/* ---------- フッター ---------- */
+
+.footer {
+  padding: 10px 16px 20px;
+  border-top: 3px solid var(--border);
+  background: var(--bg-panel);
+}
+
+.log-panel {
+  height: 90px;
+  overflow-y: auto;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  border: 2px solid var(--border);
+  padding: 6px;
+  background: var(--bg);
+}
+
+.log-panel .log-line {
+  padding: 1px 0;
+}
+
+.save-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.save-panel .btn {
+  width: auto;
+}
+
+.save-status {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+/* ---------- モーダル ---------- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal-overlay[hidden] {
+  display: none;
+}
+
+.modal {
+  background: var(--bg-panel);
+  border: 3px solid var(--border-light);
+  padding: 16px;
+  width: min(90vw, 480px);
+}
+
+.modal textarea {
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  border: 2px solid var(--border);
+  font-family: var(--font-main);
+  font-size: 0.8rem;
+  padding: 6px;
+}
+
+.modal-note {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin: 6px 0;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* =========================================================
+   ドット絵風アイコン(CSSのみ)
+   小さな図形の組み合わせで簡易的なピクセルアート風に見せる。
+   ========================================================= */
+
+.pixel-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.icon-large {
+  width: 40px;
+  height: 40px;
+}
+
+/* 木材: 三角の樹冠 + 幹 */
+.icon-wood {
+  background:
+    linear-gradient(var(--wood), var(--wood)) bottom / 100% 30% no-repeat,
+    conic-gradient(from 180deg at 50% 100%, transparent 25%, #6f9c4c 25% 75%, transparent 75%) top / 100% 75% no-repeat;
+}
+
+/* 金属: 角ばった鉱石の塊 */
+.icon-metal {
+  background: var(--metal);
+  clip-path: polygon(20% 0%, 80% 0%, 100% 30%, 100% 70%, 80% 100%, 20% 100%, 0% 70%, 0% 30%);
+}
+.icon-metal::after {
+  content: "";
+  position: absolute;
+  inset: 30%;
+  background: #6c757c;
+}
+
+/* 食料: 麦の束を縦線で簡略表現 */
+.icon-food {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--food) 0 2px,
+    transparent 2px 5px
+  );
+}
+
+/* 電力: 稲妻(clip-pathのジグザグ) */
+.icon-power {
+  background: var(--power);
+  clip-path: polygon(60% 0%, 20% 55%, 45% 55%, 35% 100%, 80% 45%, 55% 45%);
+}
+
+/* 部品: 歯車(角の飛び出た八角形 + 中心の穴) */
+.icon-components {
+  background: var(--components);
+  clip-path: polygon(
+    35% 0%, 65% 0%, 65% 15%, 85% 25%, 100% 35%, 85% 45%,
+    85% 55%, 100% 65%, 85% 75%, 65% 85%, 65% 100%, 35% 100%,
+    35% 85%, 15% 75%, 0% 65%, 15% 55%, 15% 45%, 0% 35%,
+    15% 25%, 35% 15%
+  );
+}
+.icon-components::after {
+  content: "";
+  position: absolute;
+  inset: 35%;
+  background: var(--bg-panel);
+}
+
+/* 生存者: 単純な人型シルエット */
+.icon-survivor {
+  background:
+    radial-gradient(circle at 50% 22%, var(--text) 0 30%, transparent 31%) top / 100% 45% no-repeat,
+    linear-gradient(var(--text), var(--text)) bottom / 60% 55% no-repeat;
+  margin-left: 40px;
+}
+
+/* 脱出船: 台形の船体 */
+.icon-ship {
+  background: var(--accent);
+  clip-path: polygon(30% 0%, 70% 0%, 100% 100%, 0% 100%);
+}
+</style>
 
 <header class="header">
   <h1 class="title">漂流コロニー <span class="title-sub">-Ashfall-</span></h1>
@@ -98,12 +578,1045 @@
   </div>
 </div>
 
-<script src="src/state.js"></script>
-<script src="src/buildings.js"></script>
-<script src="src/resources.js"></script>
-<script src="src/survivors.js"></script>
-<script src="src/prestige.js"></script>
-<script src="src/achievements.js"></script>
-<script src="src/save.js"></script>
-<script src="src/ui.js"></script>
-<script src="src/main.js"></script>
+<script>
+/* ---- src/state.js ---- */
+/* =========================================================
+   state.js
+   ゲーム状態の定義と初期値。
+   ========================================================= */
+(function (Game) {
+  'use strict';
+
+  Game.RESOURCE_KEYS = ['wood', 'metal', 'food', 'power', 'components'];
+  Game.BUILDING_KEYS = ['woodcutter', 'miner', 'farm', 'generator', 'refinery'];
+  Game.PRESTIGE_UPGRADE_KEYS = ['productionBoost', 'startingWood', 'populationCap', 'foodEfficiency'];
+
+  Game.FOOD_PER_SURVIVOR = 0.15; // 1人あたりの食料消費/秒
+  Game.BASE_POPULATION_CAP = 5;
+  Game.MAX_CARRY_SURVIVORS = 3;
+  Game.SAVE_KEY = 'ashfall_save_v1';
+  Game.AUTOSAVE_INTERVAL_MS = 10000;
+  Game.OFFLINE_MAX_SECONDS = 8 * 60 * 60; // 最大8時間分
+  Game.OFFLINE_EFFICIENCY = 0.5;
+
+  function createInitialState() {
+    return {
+      resources: { wood: 0, metal: 0, food: 0, power: 0, components: 0 },
+      buildings: { woodcutter: 0, miner: 0, farm: 0, generator: 0, refinery: 0 },
+      survivors: {
+        total: 0,
+        assigned: { woodcutter: 0, miner: 0, farm: 0, generator: 0, refinery: 0 },
+      },
+      clickLevel: 0,
+      prestige: {
+        count: 0,
+        knowledge: 0,
+        upgrades: { productionBoost: 0, startingWood: 0, populationCap: 0, foodEfficiency: 0 },
+      },
+      achievements: {},
+      stats: {
+        totalWoodCollected: 0,
+        totalMetalCollected: 0,
+        totalComponentsCollected: 0,
+        totalClicks: 0,
+        totalKnowledgeEarned: 0,
+      },
+      lastActiveTime: Date.now(),
+    };
+  }
+
+  Game.createInitialState = createInitialState;
+})(window.Game = window.Game || {});
+
+/* ---- src/buildings.js ---- */
+/* =========================================================
+   buildings.js
+   建物の定義、コスト計算、購入処理。
+   ========================================================= */
+(function (Game) {
+  'use strict';
+
+  Game.BUILDING_DEFS = {
+    woodcutter: {
+      name: '伐採小屋',
+      icon: 'icon-wood',
+      baseCost: { wood: 10 },
+      costGrowth: 1.13,
+      output: { wood: 0.6 },
+      consumes: {},
+      unlocked: function () { return true; },
+    },
+    miner: {
+      name: '採掘機',
+      icon: 'icon-metal',
+      baseCost: { wood: 60 },
+      costGrowth: 1.14,
+      output: { metal: 0.35 },
+      consumes: {},
+      unlocked: function (state) { return state.buildings.woodcutter >= 1; },
+    },
+    farm: {
+      name: '農場',
+      icon: 'icon-food',
+      baseCost: { wood: 90, metal: 15 },
+      costGrowth: 1.14,
+      output: { food: 0.5 },
+      consumes: {},
+      unlocked: function (state) { return state.survivors.total >= 1; },
+    },
+    generator: {
+      name: '発電機',
+      icon: 'icon-power',
+      baseCost: { metal: 120 },
+      costGrowth: 1.15,
+      output: { power: 1.2 },
+      consumes: { wood: 0.3 },
+      unlocked: function (state) { return state.buildings.miner >= 3; },
+    },
+    refinery: {
+      name: '精製所',
+      icon: 'icon-components',
+      baseCost: { metal: 220 },
+      costGrowth: 1.16,
+      output: { components: 0.15 },
+      consumes: { metal: 0.6, power: 1 },
+      unlocked: function (state) { return state.buildings.generator >= 1; },
+    },
+  };
+
+  // 建物 key の次の1レベルにかかるコストを返す
+  Game.getBuildingCost = function (key) {
+    var state = Game.state;
+    var def = Game.BUILDING_DEFS[key];
+    var level = state.buildings[key];
+    var cost = {};
+    Object.keys(def.baseCost).forEach(function (res) {
+      cost[res] = def.baseCost[res] * Math.pow(def.costGrowth, level);
+    });
+    return cost;
+  };
+
+  Game.canAfford = function (cost) {
+    var state = Game.state;
+    return Object.keys(cost).every(function (res) {
+      return state.resources[res] >= cost[res];
+    });
+  };
+
+  Game.spend = function (cost) {
+    var state = Game.state;
+    Object.keys(cost).forEach(function (res) {
+      state.resources[res] -= cost[res];
+    });
+  };
+
+  Game.buyBuilding = function (key) {
+    var def = Game.BUILDING_DEFS[key];
+    if (!def || !def.unlocked(Game.state)) return false;
+    var cost = Game.getBuildingCost(key);
+    if (!Game.canAfford(cost)) return false;
+    Game.spend(cost);
+    Game.state.buildings[key] += 1;
+    Game.checkAchievements();
+    Game.render();
+    return true;
+  };
+})(window.Game = window.Game || {});
+
+/* ---- src/resources.js ---- */
+/* =========================================================
+   resources.js
+   資源の生産/消費計算(ゲームループの中核)。
+
+   MVPでの簡略化(GDDからの実装上の割り切り):
+   - 電力は「貯蔵する資源」ではなく毎tick再計算する瞬間流量として扱う。
+     供給(発電機) < 需要(精製所など) の場合、電力を使う建物の稼働率を
+     按分で下げる(RimWorldのブラウンアウトの簡易版)。
+   - 食料は在庫として扱うが、枯渇時のペナルティは「在庫が0なら生産に
+     一律ペナルティ」という単純な閾値式にしている(段階的な計算はしない)。
+   ========================================================= */
+(function (Game) {
+  'use strict';
+
+  Game.FOOD_PENALTY_MULTIPLIER = 0.5; // 食料が尽きているときの生産倍率
+
+  // 実績/永続強化を反映した全体生産倍率
+  Game.getGlobalMultiplier = function (state) {
+    var prestigeBoost = 1 + 0.05 * state.prestige.upgrades.productionBoost;
+    var unlockedCount = Object.keys(state.achievements).filter(function (id) {
+      return state.achievements[id];
+    }).length;
+    var achievementBoost = 1 + 0.02 * unlockedCount;
+    return prestigeBoost * achievementBoost;
+  };
+
+  Game.getSurvivorBonus = function (state, buildingKey) {
+    var assigned = state.survivors.assigned[buildingKey] || 0;
+    return 1 + 0.08 * assigned;
+  };
+
+  // dtSeconds 分のシミュレーションを1回だけ進める。
+  // options.offline === true のときはオフライン算出用に効率を落とす。
+  Game.tick = function (dtSeconds, options) {
+    options = options || {};
+    var state = Game.state;
+    var offlineEfficiency = options.offline ? Game.OFFLINE_EFFICIENCY : 1;
+    var globalMult = Game.getGlobalMultiplier(state) * offlineEfficiency;
+    var foodPenalty = (state.survivors.total > 0 && state.resources.food <= 0)
+      ? Game.FOOD_PENALTY_MULTIPLIER
+      : 1;
+
+    // 1. 建物ごとの素の生産/消費(電力按分前)を算出
+    var raw = {};
+    Game.BUILDING_KEYS.forEach(function (key) {
+      var def = Game.BUILDING_DEFS[key];
+      var level = state.buildings[key];
+      var produce = {};
+      var consume = {};
+      if (level > 0) {
+        var survivorBonus = Game.getSurvivorBonus(state, key);
+        Object.keys(def.output || {}).forEach(function (res) {
+          produce[res] = def.output[res] * level * survivorBonus * globalMult * foodPenalty;
+        });
+        Object.keys(def.consumes || {}).forEach(function (res) {
+          consume[res] = def.consumes[res] * level;
+        });
+      }
+      raw[key] = { produce: produce, consume: consume };
+    });
+
+    // 2. 電力の需給を計算し、電力を使う建物の稼働率を決める
+    var powerSupply = 0;
+    var powerDemand = 0;
+    Game.BUILDING_KEYS.forEach(function (key) {
+      powerSupply += raw[key].produce.power || 0;
+      powerDemand += raw[key].consume.power || 0;
+    });
+    var powerRatio = powerDemand > 0 ? Math.min(1, powerSupply / powerDemand) : 1;
+
+    Game.BUILDING_KEYS.forEach(function (key) {
+      var def = Game.BUILDING_DEFS[key];
+      var usesPower = def.consumes && def.consumes.power;
+      if (!usesPower) return;
+      Object.keys(raw[key].produce).forEach(function (res) {
+        raw[key].produce[res] *= powerRatio;
+      });
+      Object.keys(raw[key].consume).forEach(function (res) {
+        raw[key].consume[res] *= powerRatio;
+      });
+    });
+
+    // 3. 資源へ反映
+    var delta = { wood: 0, metal: 0, food: 0, power: 0, components: 0 };
+    Game.BUILDING_KEYS.forEach(function (key) {
+      Object.keys(raw[key].produce).forEach(function (res) {
+        delta[res] += raw[key].produce[res] * dtSeconds;
+      });
+      Object.keys(raw[key].consume).forEach(function (res) {
+        delta[res] -= raw[key].consume[res] * dtSeconds;
+      });
+    });
+
+    // 食料は生存者の維持で消費(食料効率アップで軽減)
+    var foodEff = 1 - 0.08 * state.prestige.upgrades.foodEfficiency;
+    if (foodEff < 0.2) foodEff = 0.2;
+    delta.food -= state.survivors.total * Game.FOOD_PER_SURVIVOR * foodEff * dtSeconds;
+
+    var rates = {};
+    Game.RESOURCE_KEYS.forEach(function (res) {
+      if (res === 'power') {
+        // 電力は貯蔵しない瞬間流量として表示用に上書き(需給差の目安)
+        state.resources.power = powerSupply * powerRatio - powerDemand * powerRatio;
+        rates.power = state.resources.power;
+        return;
+      }
+      state.resources[res] = Math.max(0, state.resources[res] + delta[res]);
+      rates[res] = dtSeconds > 0 ? delta[res] / dtSeconds : 0;
+    });
+    Game.lastRates = rates;
+
+    // 統計(実績判定用)
+    if (delta.wood > 0) state.stats.totalWoodCollected += delta.wood;
+    if (delta.metal > 0) state.stats.totalMetalCollected += delta.metal;
+    var componentsProduced = (raw.refinery.produce.components || 0) * dtSeconds;
+    if (componentsProduced > 0) state.stats.totalComponentsCollected += componentsProduced;
+
+    Game.lastPowerInfo = { supply: powerSupply, demand: powerDemand, ratio: powerRatio };
+  };
+
+  // 手動クリックによる木材採集
+  Game.getClickAmount = function () {
+    var state = Game.state;
+    var globalMult = Game.getGlobalMultiplier(state);
+    return (1 + state.clickLevel) * globalMult;
+  };
+
+  Game.doManualClick = function () {
+    var state = Game.state;
+    var amount = Game.getClickAmount();
+    state.resources.wood += amount;
+    state.stats.totalWoodCollected += amount;
+    state.stats.totalClicks += 1;
+    Game.checkAchievements();
+    Game.render();
+  };
+
+  Game.getClickUpgradeCost = function () {
+    return Math.ceil(15 * Math.pow(1.6, Game.state.clickLevel));
+  };
+
+  Game.buyClickUpgrade = function () {
+    var cost = Game.getClickUpgradeCost();
+    if (Game.state.resources.wood < cost) return false;
+    Game.state.resources.wood -= cost;
+    Game.state.clickLevel += 1;
+    Game.render();
+    return true;
+  };
+})(window.Game = window.Game || {});
+
+/* ---- src/survivors.js ---- */
+/* =========================================================
+   survivors.js
+   生存者の受け入れと建物への割り当て(簡略版)。
+   ========================================================= */
+(function (Game) {
+  'use strict';
+
+  Game.getPopulationCap = function (state) {
+    return Game.BASE_POPULATION_CAP + state.prestige.upgrades.populationCap;
+  };
+
+  Game.getSurvivorAcceptCost = function () {
+    var n = Game.state.survivors.total;
+    return Math.ceil(20 * Math.pow(1.5, n));
+  };
+
+  Game.acceptSurvivor = function () {
+    var state = Game.state;
+    var cap = Game.getPopulationCap(state);
+    if (state.survivors.total >= cap) return false;
+    var cost = Game.getSurvivorAcceptCost();
+    if (state.resources.wood < cost) return false;
+    state.resources.wood -= cost;
+    state.survivors.total += 1;
+    Game.checkAchievements();
+    Game.render();
+    return true;
+  };
+
+  Game.getUnassignedSurvivors = function (state) {
+    var assignedTotal = Game.BUILDING_KEYS.reduce(function (sum, key) {
+      return sum + (state.survivors.assigned[key] || 0);
+    }, 0);
+    return state.survivors.total - assignedTotal;
+  };
+
+  Game.assignSurvivor = function (buildingKey) {
+    var state = Game.state;
+    if (state.buildings[buildingKey] <= 0) return false;
+    if (Game.getUnassignedSurvivors(state) <= 0) return false;
+    state.survivors.assigned[buildingKey] = (state.survivors.assigned[buildingKey] || 0) + 1;
+    Game.render();
+    return true;
+  };
+
+  Game.unassignSurvivor = function (buildingKey) {
+    var state = Game.state;
+    if ((state.survivors.assigned[buildingKey] || 0) <= 0) return false;
+    state.survivors.assigned[buildingKey] -= 1;
+    Game.render();
+    return true;
+  };
+})(window.Game = window.Game || {});
+
+/* ---- src/prestige.js ---- */
+/* =========================================================
+   prestige.js
+   脱出船の建造条件、惑星ジャンプ(プレステージ)処理、
+   知識ポイントによる永続強化。
+   ========================================================= */
+(function (Game) {
+  'use strict';
+
+  Game.ESCAPE_REQUIREMENTS = { components: 500, metal: 800 };
+
+  Game.PRESTIGE_UPGRADE_DEFS = {
+    productionBoost: { name: '生産効率 +5%', baseCost: 3, growth: 1.6, max: 20 },
+    startingWood: { name: '開始時の木材 +100', baseCost: 2, growth: 1.5, max: 20 },
+    populationCap: { name: '生存者の上限 +1', baseCost: 4, growth: 1.7, max: 15 },
+    foodEfficiency: { name: '食料消費 -8%', baseCost: 3, growth: 1.6, max: 5 },
+  };
+
+  Game.canPrestige = function (state) {
+    return state.resources.components >= Game.ESCAPE_REQUIREMENTS.components
+      && state.resources.metal >= Game.ESCAPE_REQUIREMENTS.metal;
+  };
+
+  Game.calcKnowledgeGain = function (state) {
+    var score = (state.resources.components * 2 + state.resources.metal) / 40;
+    return Math.max(1, Math.floor(Math.sqrt(score)));
+  };
+
+  // 惑星ジャンプを実行する。carryCount は同行させる生存者の人数(0〜3)。
+  Game.doPrestige = function (carryCount) {
+    var state = Game.state;
+    if (!Game.canPrestige(state)) return false;
+
+    var kpGained = Game.calcKnowledgeGain(state);
+    var carry = Math.max(0, Math.min(Game.MAX_CARRY_SURVIVORS, carryCount || 0, state.survivors.total));
+
+    state.resources = {
+      wood: 100 * state.prestige.upgrades.startingWood,
+      metal: 0,
+      food: 0,
+      power: 0,
+      components: 0,
+    };
+    Game.BUILDING_KEYS.forEach(function (key) {
+      state.buildings[key] = 0;
+    });
+    state.survivors.total = carry;
+    Game.BUILDING_KEYS.forEach(function (key) {
+      state.survivors.assigned[key] = 0;
+    });
+    state.clickLevel = 0;
+
+    state.prestige.count += 1;
+    state.prestige.knowledge += kpGained;
+    state.stats.totalKnowledgeEarned += kpGained;
+
+    Game.addLog('第' + (state.prestige.count + 1) + '惑星へジャンプしました(知識+' + kpGained + ')');
+    Game.checkAchievements();
+    Game.render();
+    return true;
+  };
+
+  Game.getPrestigeUpgradeCost = function (key) {
+    var def = Game.PRESTIGE_UPGRADE_DEFS[key];
+    var level = Game.state.prestige.upgrades[key];
+    return Math.ceil(def.baseCost * Math.pow(def.growth, level));
+  };
+
+  Game.buyPrestigeUpgrade = function (key) {
+    var state = Game.state;
+    var def = Game.PRESTIGE_UPGRADE_DEFS[key];
+    var level = state.prestige.upgrades[key];
+    if (level >= def.max) return false;
+    var cost = Game.getPrestigeUpgradeCost(key);
+    if (state.prestige.knowledge < cost) return false;
+    state.prestige.knowledge -= cost;
+    state.prestige.upgrades[key] += 1;
+    Game.render();
+    return true;
+  };
+})(window.Game = window.Game || {});
+
+/* ---- src/achievements.js ---- */
+/* =========================================================
+   achievements.js
+   実績の定義と判定。
+   実績はLocalStorageにのみ保存し、セーブコードには含めない
+   (GDD 7章・9章のハイブリッド仕様)。
+   ========================================================= */
+(function (Game) {
+  'use strict';
+
+  Game.ACHIEVEMENT_DEFS = [
+    { id: 'first_click', name: '最初の一歩', desc: '木材を初めて手動で集めた', check: function (s) { return s.stats.totalClicks >= 1; } },
+    { id: 'first_building', name: '拠点の礎', desc: '初めて建物を建てた', check: function (s) { return Game.BUILDING_KEYS.some(function (k) { return s.buildings[k] >= 1; }); } },
+    { id: 'first_survivor', name: '仲間', desc: '初めて生存者を迎え入れた', check: function (s) { return s.survivors.total >= 1; } },
+    { id: 'clicks_100', name: '働き者', desc: 'クリックを100回行った', check: function (s) { return s.stats.totalClicks >= 100; } },
+    { id: 'wood_1000', name: '木こり', desc: '木材を累計1000集めた', check: function (s) { return s.stats.totalWoodCollected >= 1000; } },
+    { id: 'metal_500', name: '採掘者', desc: '金属を累計500集めた', check: function (s) { return s.stats.totalMetalCollected >= 500; } },
+    { id: 'components_100', name: '技師', desc: '部品を累計100生産した', check: function (s) { return s.stats.totalComponentsCollected >= 100; } },
+    { id: 'survivors_5', name: '小さな集落', desc: '生存者が5人になった', check: function (s) { return s.survivors.total >= 5; } },
+    { id: 'building_lvl10', name: '拡張の証', desc: 'いずれかの建物をLv.10にした', check: function (s) { return Game.BUILDING_KEYS.some(function (k) { return s.buildings[k] >= 10; }); } },
+    { id: 'first_prestige', name: '旅立ち', desc: '初めて惑星ジャンプを行った', check: function (s) { return s.prestige.count >= 1; } },
+    { id: 'prestige_3', name: '流浪の民', desc: '惑星ジャンプを3回行った', check: function (s) { return s.prestige.count >= 3; } },
+    { id: 'knowledge_50', name: '蓄積された知恵', desc: '知識ポイントを累計50獲得した', check: function (s) { return s.stats.totalKnowledgeEarned >= 50; } },
+  ];
+
+  Game.checkAchievements = function () {
+    var state = Game.state;
+    var unlockedNew = [];
+    Game.ACHIEVEMENT_DEFS.forEach(function (def) {
+      if (state.achievements[def.id]) return;
+      if (def.check(state)) {
+        state.achievements[def.id] = true;
+        unlockedNew.push(def);
+      }
+    });
+    unlockedNew.forEach(function (def) {
+      Game.addLog('実績解放: ' + def.name);
+    });
+    return unlockedNew;
+  };
+})(window.Game = window.Game || {});
+
+/* ---- src/save.js ---- */
+/* =========================================================
+   save.js
+   保存の二本立て:
+   1. LocalStorage自動保存(実績・統計を含む完全な状態)
+   2. 「ふっかつのじゅもん」型セーブコード(主要パラメータのみ、
+      精度優先。実績・統計は含めない = 端末ごとの記録として扱う)
+   ========================================================= */
+(function (Game) {
+  'use strict';
+
+  // ---------- LocalStorage ----------
+
+  Game.saveToLocalStorage = function () {
+    try {
+      Game.state.lastActiveTime = Date.now();
+      window.localStorage.setItem(Game.SAVE_KEY, JSON.stringify(Game.state));
+      return true;
+    } catch (e) {
+      console.error('保存に失敗しました', e);
+      return false;
+    }
+  };
+
+  Game.loadFromLocalStorage = function () {
+    try {
+      var raw = window.localStorage.getItem(Game.SAVE_KEY);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      return Game.normalizeState(parsed);
+    } catch (e) {
+      console.error('読み込みに失敗しました', e);
+      return null;
+    }
+  };
+
+  // 古いセーブや壊れたJSONに欠けているフィールドを初期値で補完する
+  Game.normalizeState = function (parsed) {
+    var fresh = Game.createInitialState();
+    var state = Object.assign({}, fresh, parsed);
+    state.resources = Object.assign({}, fresh.resources, parsed.resources);
+    state.buildings = Object.assign({}, fresh.buildings, parsed.buildings);
+    state.survivors = Object.assign({}, fresh.survivors, parsed.survivors);
+    state.survivors.assigned = Object.assign({}, fresh.survivors.assigned, parsed.survivors && parsed.survivors.assigned);
+    state.prestige = Object.assign({}, fresh.prestige, parsed.prestige);
+    state.prestige.upgrades = Object.assign({}, fresh.prestige.upgrades, parsed.prestige && parsed.prestige.upgrades);
+    state.achievements = Object.assign({}, parsed.achievements);
+    state.stats = Object.assign({}, fresh.stats, parsed.stats);
+    return state;
+  };
+
+  // ---------- セーブコード ----------
+
+  function toBase36(n) {
+    return Math.max(0, Math.round(n)).toString(36);
+  }
+
+  function checksum(str) {
+    var sum = 0;
+    for (var i = 0; i < str.length; i++) {
+      sum = (sum * 31 + str.charCodeAt(i)) >>> 0;
+    }
+    return sum.toString(36).slice(-4);
+  }
+
+  Game.encodeSaveCode = function (state) {
+    var nums = [];
+    Game.RESOURCE_KEYS.forEach(function (k) { nums.push(state.resources[k] * 100); });
+    Game.BUILDING_KEYS.forEach(function (k) { nums.push(state.buildings[k]); });
+    nums.push(state.survivors.total);
+    Game.BUILDING_KEYS.forEach(function (k) { nums.push(state.survivors.assigned[k] || 0); });
+    nums.push(state.clickLevel);
+    nums.push(state.prestige.count);
+    nums.push(state.prestige.knowledge * 100);
+    Game.PRESTIGE_UPGRADE_KEYS.forEach(function (k) { nums.push(state.prestige.upgrades[k]); });
+    nums.push(Math.floor(state.lastActiveTime / 1000));
+
+    var body = nums.map(toBase36).join('.');
+    return body + '_' + checksum(body);
+  };
+
+  Game.decodeSaveCode = function (code) {
+    code = (code || '').trim();
+    var sepIndex = code.lastIndexOf('_');
+    if (sepIndex === -1) throw new Error('コードの形式が正しくありません');
+    var body = code.slice(0, sepIndex);
+    var sum = code.slice(sepIndex + 1);
+    if (checksum(body) !== sum) throw new Error('コードが壊れています(チェックサム不一致)');
+
+    var nums = body.split('.').map(function (s) { return parseInt(s, 36); });
+    if (nums.some(function (n) { return Number.isNaN(n); })) {
+      throw new Error('コードを読み取れませんでした');
+    }
+
+    var state = Game.createInitialState();
+    var i = 0;
+    Game.RESOURCE_KEYS.forEach(function (k) { state.resources[k] = nums[i++] / 100; });
+    Game.BUILDING_KEYS.forEach(function (k) { state.buildings[k] = nums[i++]; });
+    state.survivors.total = nums[i++];
+    Game.BUILDING_KEYS.forEach(function (k) { state.survivors.assigned[k] = nums[i++]; });
+    state.clickLevel = nums[i++];
+    state.prestige.count = nums[i++];
+    state.prestige.knowledge = nums[i++] / 100;
+    Game.PRESTIGE_UPGRADE_KEYS.forEach(function (k) { state.prestige.upgrades[k] = nums[i++]; });
+    state.lastActiveTime = nums[i++] * 1000;
+    return state;
+  };
+
+  // ---------- オフライン進行 ----------
+
+  Game.applyOfflineProgress = function (state) {
+    var elapsedMs = Date.now() - (state.lastActiveTime || Date.now());
+    var elapsedSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+    if (elapsedSeconds < 5) return 0; // 誤差レベルは無視
+    var cappedSeconds = Math.min(elapsedSeconds, Game.OFFLINE_MAX_SECONDS);
+
+    var prevState = Game.state;
+    Game.state = state;
+    Game.tick(cappedSeconds, { offline: true });
+    Game.state = prevState;
+
+    return cappedSeconds;
+  };
+})(window.Game = window.Game || {});
+
+/* ---- src/ui.js ---- */
+/* =========================================================
+   ui.js
+   DOMの描画とイベントバインド。
+   ========================================================= */
+(function (Game) {
+  'use strict';
+
+  Game.RESOURCE_NAMES = { wood: '木材', metal: '金属', food: '食料', power: '電力', components: '部品' };
+  Game.logMessages = [];
+  Game.carrySelection = 0;
+  Game.modalMode = null; // 'export' | 'import'
+
+  // ---------- 数値フォーマット ----------
+
+  Game.formatNumber = function (n) {
+    if (n === null || n === undefined || Number.isNaN(n)) return '0';
+    var sign = n < 0 ? '-' : '';
+    n = Math.abs(n);
+    if (n < 1000) return sign + (Number.isInteger(n) ? String(n) : n.toFixed(1));
+    var units = ['K', 'M', 'B', 'T', 'Qa', 'Qi'];
+    var unitIndex = -1;
+    while (n >= 1000 && unitIndex < units.length - 1) {
+      n /= 1000;
+      unitIndex += 1;
+    }
+    return sign + n.toFixed(2) + units[unitIndex];
+  };
+
+  Game.formatRate = function (n) {
+    var sign = n >= 0 ? '+' : '';
+    return sign + Game.formatNumber(n) + '/s';
+  };
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  // ---------- ログ ----------
+
+  Game.addLog = function (message) {
+    var time = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    Game.logMessages.unshift('[' + time + '] ' + message);
+    if (Game.logMessages.length > 50) Game.logMessages.length = 50;
+    renderLog();
+  };
+
+  function renderLog() {
+    var panel = document.getElementById('log-panel');
+    panel.innerHTML = Game.logMessages
+      .map(function (m) { return '<div class="log-line">' + escapeHtml(m) + '</div>'; })
+      .join('');
+  }
+
+  // ---------- 各パネルの描画 ----------
+
+  function renderResources() {
+    var list = document.getElementById('resource-list');
+    list.innerHTML = '';
+    Game.RESOURCE_KEYS.forEach(function (key) {
+      var li = document.createElement('li');
+
+      var icon = document.createElement('span');
+      icon.className = 'pixel-icon icon-' + key;
+
+      var name = document.createElement('span');
+      name.textContent = Game.RESOURCE_NAMES[key];
+
+      var amount = document.createElement('span');
+      amount.className = 'amount';
+      amount.textContent = Game.formatNumber(Game.state.resources[key]);
+
+      var rate = document.createElement('span');
+      rate.className = 'rate';
+      var r = (Game.lastRates && Game.lastRates[key]) || 0;
+      rate.textContent = key === 'power' ? '(' + Game.formatNumber(r) + ')' : Game.formatRate(r);
+
+      li.appendChild(icon);
+      li.appendChild(name);
+      li.appendChild(amount);
+      li.appendChild(rate);
+      list.appendChild(li);
+    });
+  }
+
+  function renderClickArea() {
+    document.getElementById('click-amount').textContent = Game.formatNumber(Game.getClickAmount());
+    document.getElementById('click-level').textContent = Game.state.clickLevel;
+    var cost = Game.getClickUpgradeCost();
+    document.getElementById('click-upgrade-cost').textContent = Game.formatNumber(cost);
+    document.getElementById('btn-upgrade-click').disabled = Game.state.resources.wood < cost;
+  }
+
+  function renderBuildings() {
+    var state = Game.state;
+    var list = document.getElementById('building-list');
+    list.innerHTML = '';
+    Game.BUILDING_KEYS.forEach(function (key) {
+      var def = Game.BUILDING_DEFS[key];
+      if (!def.unlocked(state)) return;
+      var level = state.buildings[key];
+      var cost = Game.getBuildingCost(key);
+      var affordable = Game.canAfford(cost);
+
+      var li = document.createElement('li');
+      li.className = 'building-item';
+
+      var icon = document.createElement('span');
+      icon.className = 'pixel-icon ' + def.icon;
+
+      var info = document.createElement('div');
+      var nameEl = document.createElement('div');
+      nameEl.className = 'b-name';
+      nameEl.textContent = def.name + ' Lv.' + level;
+
+      var detail = document.createElement('div');
+      detail.className = 'b-detail';
+      var outputParts = Object.keys(def.output).map(function (res) {
+        var perSec = def.output[res] * level * Game.getSurvivorBonus(state, key);
+        return '+' + Game.formatNumber(perSec) + Game.RESOURCE_NAMES[res] + '/s';
+      });
+      var consumeParts = Object.keys(def.consumes).map(function (res) {
+        var perSec = def.consumes[res] * level;
+        return '-' + Game.formatNumber(perSec) + Game.RESOURCE_NAMES[res] + '/s';
+      });
+      var costText = Object.keys(cost).map(function (res) {
+        return Game.formatNumber(cost[res]) + Game.RESOURCE_NAMES[res];
+      }).join(' + ');
+      var statusText = (level > 0 ? outputParts.concat(consumeParts).join(' ') : '未建設');
+      detail.textContent = statusText + ' / 次のコスト: ' + costText;
+
+      info.appendChild(nameEl);
+      info.appendChild(detail);
+
+      var buyBtn = document.createElement('button');
+      buyBtn.className = 'btn btn-small';
+      buyBtn.textContent = '建設';
+      buyBtn.disabled = !affordable;
+      buyBtn.addEventListener('click', function () { Game.buyBuilding(key); });
+
+      li.appendChild(icon);
+      li.appendChild(info);
+      li.appendChild(buyBtn);
+      list.appendChild(li);
+    });
+  }
+
+  function renderSurvivors() {
+    var state = Game.state;
+    var cap = Game.getPopulationCap(state);
+    document.getElementById('survivor-count-text').textContent = state.survivors.total + ' / ' + cap;
+
+    var cost = Game.getSurvivorAcceptCost();
+    document.getElementById('survivor-cost').textContent = Game.formatNumber(cost);
+    document.getElementById('btn-accept-survivor').disabled = state.survivors.total >= cap || state.resources.wood < cost;
+
+    var assignList = document.getElementById('survivor-assign-list');
+    assignList.innerHTML = '';
+
+    var unassigned = Game.getUnassignedSurvivors(state);
+    var unassignedRow = document.createElement('div');
+    unassignedRow.className = 'assign-row';
+    unassignedRow.innerHTML = '<span class="assign-name">未割り当て</span><span>' + unassigned + '人</span>';
+    assignList.appendChild(unassignedRow);
+
+    Game.BUILDING_KEYS.forEach(function (key) {
+      if (state.buildings[key] <= 0) return;
+      var def = Game.BUILDING_DEFS[key];
+
+      var row = document.createElement('div');
+      row.className = 'assign-row';
+
+      var name = document.createElement('span');
+      name.className = 'assign-name';
+      name.textContent = def.name;
+
+      var minus = document.createElement('button');
+      minus.className = 'btn btn-tiny';
+      minus.textContent = '-';
+      minus.disabled = (state.survivors.assigned[key] || 0) <= 0;
+      minus.addEventListener('click', function () { Game.unassignSurvivor(key); });
+
+      var count = document.createElement('span');
+      count.textContent = state.survivors.assigned[key] || 0;
+
+      var plus = document.createElement('button');
+      plus.className = 'btn btn-tiny';
+      plus.textContent = '+';
+      plus.disabled = unassigned <= 0;
+      plus.addEventListener('click', function () { Game.assignSurvivor(key); });
+
+      row.appendChild(name);
+      row.appendChild(minus);
+      row.appendChild(count);
+      row.appendChild(plus);
+      assignList.appendChild(row);
+    });
+  }
+
+  function renderPrestige() {
+    var state = Game.state;
+    var req = Game.ESCAPE_REQUIREMENTS;
+
+    document.getElementById('prestige-requirements').textContent =
+      '必要資源 — 部品: ' + Game.formatNumber(state.resources.components) + ' / ' + Game.formatNumber(req.components)
+      + ' ・ 金属: ' + Game.formatNumber(state.resources.metal) + ' / ' + Game.formatNumber(req.metal);
+
+    var maxCarry = Math.min(Game.MAX_CARRY_SURVIVORS, state.survivors.total);
+    if (Game.carrySelection > maxCarry) Game.carrySelection = maxCarry;
+    document.getElementById('carry-count').textContent = Game.carrySelection;
+    document.getElementById('carry-minus').disabled = Game.carrySelection <= 0;
+    document.getElementById('carry-plus').disabled = Game.carrySelection >= maxCarry;
+
+    document.getElementById('knowledge-count').textContent = Game.formatNumber(state.prestige.knowledge);
+    document.getElementById('btn-prestige').disabled = !Game.canPrestige(state);
+
+    var upgradeList = document.getElementById('prestige-upgrade-list');
+    upgradeList.innerHTML = '';
+    Game.PRESTIGE_UPGRADE_KEYS.forEach(function (key) {
+      var def = Game.PRESTIGE_UPGRADE_DEFS[key];
+      var level = state.prestige.upgrades[key];
+
+      var li = document.createElement('li');
+      li.className = 'upgrade-item';
+
+      var label = document.createElement('span');
+      label.textContent = def.name + ' (Lv.' + level + (level >= def.max ? '/MAX' : '') + ')';
+
+      var btn = document.createElement('button');
+      btn.className = 'btn btn-tiny';
+      if (level >= def.max) {
+        btn.textContent = 'MAX';
+        btn.disabled = true;
+      } else {
+        var cost = Game.getPrestigeUpgradeCost(key);
+        btn.textContent = cost;
+        btn.disabled = state.prestige.knowledge < cost;
+        btn.addEventListener('click', function () { Game.buyPrestigeUpgrade(key); });
+      }
+
+      li.appendChild(label);
+      li.appendChild(btn);
+      upgradeList.appendChild(li);
+    });
+  }
+
+  function renderAchievements() {
+    var list = document.getElementById('achievement-list');
+    list.innerHTML = '';
+    Game.ACHIEVEMENT_DEFS.forEach(function (def) {
+      var unlocked = !!Game.state.achievements[def.id];
+      var li = document.createElement('li');
+      li.className = 'achievement-item' + (unlocked ? ' unlocked' : '');
+      li.textContent = (unlocked ? '[済] ' : '[  ] ') + def.name + ' — ' + def.desc;
+      list.appendChild(li);
+    });
+  }
+
+  function renderHeader() {
+    document.getElementById('planet-count').textContent = '第' + (Game.state.prestige.count + 1) + '惑星';
+  }
+
+  function renderSaveStatus(text) {
+    document.getElementById('save-status').textContent = text || '';
+  }
+  Game.renderSaveStatus = renderSaveStatus;
+
+  Game.render = function () {
+    renderHeader();
+    renderResources();
+    renderClickArea();
+    renderBuildings();
+    renderSurvivors();
+    renderPrestige();
+    renderAchievements();
+  };
+
+  // ---------- モーダル ----------
+
+  function openModal(mode) {
+    Game.modalMode = mode;
+    var overlay = document.getElementById('modal-overlay');
+    var title = document.getElementById('modal-title');
+    var textarea = document.getElementById('modal-textarea');
+    var note = document.getElementById('modal-note');
+
+    if (mode === 'export') {
+      title.textContent = 'セーブコード(コピーして保存してください)';
+      textarea.value = Game.encodeSaveCode(Game.state);
+      textarea.readOnly = true;
+      note.textContent = '※ 実績・統計はこのコードに含まれません(端末ごとのLocalStorageに保存されます)。';
+      textarea.select();
+    } else {
+      title.textContent = 'セーブコードを読み込む';
+      textarea.value = '';
+      textarea.readOnly = false;
+      note.textContent = '別端末で発行したコードを貼り付けてください。現在の進行状況は上書きされます。';
+    }
+    overlay.hidden = false;
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').hidden = true;
+    Game.modalMode = null;
+  }
+
+  function handleModalConfirm() {
+    if (Game.modalMode === 'import') {
+      var code = document.getElementById('modal-textarea').value;
+      try {
+        var imported = Game.decodeSaveCode(code);
+        // 実績・統計はこの端末のものを維持する(ハイブリッド仕様)
+        imported.achievements = Object.assign({}, Game.state.achievements);
+        imported.stats = Object.assign({}, Game.state.stats);
+        Game.state = imported;
+        var offlineSec = Game.applyOfflineProgress(Game.state);
+        Game.saveToLocalStorage();
+        Game.render();
+        Game.addLog('セーブコードを読み込みました' + (offlineSec > 0 ? '(放置分 ' + Math.floor(offlineSec / 60) + '分 を反映)' : ''));
+      } catch (e) {
+        window.alert('読み込みに失敗しました: ' + e.message);
+        return;
+      }
+    }
+    closeModal();
+  }
+
+  // ---------- イベントバインド ----------
+
+  Game.initUI = function () {
+    document.getElementById('btn-click').addEventListener('click', function () { Game.doManualClick(); });
+    document.getElementById('btn-upgrade-click').addEventListener('click', function () { Game.buyClickUpgrade(); });
+    document.getElementById('btn-accept-survivor').addEventListener('click', function () { Game.acceptSurvivor(); });
+
+    document.getElementById('carry-plus').addEventListener('click', function () {
+      var maxCarry = Math.min(Game.MAX_CARRY_SURVIVORS, Game.state.survivors.total);
+      if (Game.carrySelection < maxCarry) Game.carrySelection += 1;
+      Game.render();
+    });
+    document.getElementById('carry-minus').addEventListener('click', function () {
+      if (Game.carrySelection > 0) Game.carrySelection -= 1;
+      Game.render();
+    });
+
+    document.getElementById('btn-prestige').addEventListener('click', function () {
+      if (!Game.canPrestige(Game.state)) return;
+      var ok = window.confirm('脱出船を発進します。現在の建物・資源は失われますが、知識ポイントと同行させた生存者' + Game.carrySelection + '人は引き継がれます。よろしいですか?');
+      if (!ok) return;
+      Game.doPrestige(Game.carrySelection);
+      Game.carrySelection = 0;
+      Game.saveToLocalStorage();
+    });
+
+    document.getElementById('btn-export').addEventListener('click', function () { openModal('export'); });
+    document.getElementById('btn-import').addEventListener('click', function () { openModal('import'); });
+    document.getElementById('modal-confirm').addEventListener('click', handleModalConfirm);
+    document.getElementById('modal-cancel').addEventListener('click', closeModal);
+
+    document.getElementById('btn-reset').addEventListener('click', function () {
+      var ok = window.confirm('本当に最初からやり直しますか?この操作は取り消せません。');
+      if (!ok) return;
+      Game.state = Game.createInitialState();
+      Game.carrySelection = 0;
+      Game.saveToLocalStorage();
+      Game.render();
+      Game.addLog('コロニーの記録を消去し、最初からやり直します。');
+    });
+  };
+})(window.Game = window.Game || {});
+
+/* ---- src/main.js ---- */
+/* =========================================================
+   main.js
+   起動処理・ゲームループ・自動保存。
+   ========================================================= */
+(function (Game) {
+  'use strict';
+
+  function boot() {
+    var loaded = Game.loadFromLocalStorage();
+    Game.state = loaded || Game.createInitialState();
+
+    if (loaded) {
+      var offlineSeconds = Game.applyOfflineProgress(Game.state);
+      if (offlineSeconds > 0) {
+        var minutes = Math.floor(offlineSeconds / 60);
+        Game.addLog('おかえりなさい。離脱していた間(約' + minutes + '分、上限あり)の生産を反映しました。');
+      } else {
+        Game.addLog('コロニーの記録を読み込みました。');
+      }
+    } else {
+      Game.addLog('墜落した輸送船から、生存者たちが降り立った……');
+    }
+
+    Game.checkAchievements();
+    Game.initUI();
+    Game.render();
+    Game.renderSaveStatus('準備完了');
+
+    startLoop();
+    startAutosave();
+
+    window.addEventListener('beforeunload', function () {
+      Game.saveToLocalStorage();
+    });
+  }
+
+  // シミュレーションは1秒間に数回のtickで十分(アイドルゲームなので60fps不要)。
+  // 毎フレームDOMを丸ごと再構築すると、ボタンが再生成され続けてクリックが
+  // 取りこぼされる不具合につながるため、tick間隔=描画間隔として扱う。
+  var TICK_INTERVAL_MS = 200;
+
+  function startLoop() {
+    var last = Date.now();
+    setInterval(function () {
+      var now = Date.now();
+      var dt = (now - last) / 1000;
+      last = now;
+      // タブがバックグラウンドから復帰した際などの巨大なdtを防ぐ
+      if (dt > 0 && dt < 5) {
+        Game.tick(dt);
+        Game.checkAchievements();
+        Game.render();
+      }
+    }, TICK_INTERVAL_MS);
+  }
+
+  function startAutosave() {
+    setInterval(function () {
+      Game.saveToLocalStorage();
+      Game.renderSaveStatus('自動保存済み ' + new Date().toLocaleTimeString('ja-JP'));
+    }, Game.AUTOSAVE_INTERVAL_MS);
+  }
+
+  document.addEventListener('DOMContentLoaded', boot);
+})(window.Game = window.Game || {});
+
+</script>
