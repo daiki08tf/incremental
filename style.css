@@ -1,0 +1,478 @@
+/* =========================================================
+   漂流コロニー -Ashfall- : ドット絵風スタイル
+   画像素材は使わず、CSSの図形・box-shadowのみで表現する。
+   ========================================================= */
+
+:root {
+  --bg: #1b1712;
+  --bg-panel: #26201a;
+  --bg-panel-alt: #2f2820;
+  --border: #59493a;
+  --border-light: #7a6650;
+  --text: #e8dcc8;
+  --text-dim: #a7967f;
+  --accent: #e08a3c;
+  --accent-dim: #8a5a2a;
+  --wood: #b8804a;
+  --metal: #9aa5ad;
+  --food: #d7c15a;
+  --power: #e8d34a;
+  --components: #6fb3c9;
+  --danger: #c85c4a;
+  --ok: #6fbf6f;
+  --font-main: "Courier New", "MS Gothic", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-main);
+  background: var(--bg);
+  color: var(--text);
+  image-rendering: pixelated;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* ---------- レイアウト ---------- */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--bg-panel);
+  border-bottom: 3px solid var(--border);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.2rem;
+  letter-spacing: 1px;
+}
+
+.title-sub {
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.planet-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--bg-panel-alt);
+  border: 2px solid var(--border-light);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 240px 1fr 300px;
+  gap: 12px;
+  padding: 12px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  background: var(--bg-panel);
+  border: 3px solid var(--border);
+  padding: 10px;
+}
+
+.panel-title {
+  margin: 6px 0;
+  font-size: 0.85rem;
+  color: var(--accent);
+  border-bottom: 2px dashed var(--border-light);
+  padding-bottom: 4px;
+}
+
+/* ---------- 資源リスト ---------- */
+
+.resource-list {
+  list-style: none;
+  margin: 0 0 10px 0;
+  padding: 0;
+}
+
+.resource-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.resource-list .amount {
+  margin-left: auto;
+  font-weight: bold;
+}
+
+.resource-list .rate {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+}
+
+/* ---------- クリックエリア ---------- */
+
+.click-area {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 10px;
+  background: var(--bg-panel-alt);
+  border: 3px solid var(--border-light);
+  color: var(--text);
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.click-area:active {
+  transform: translateY(2px);
+  background: var(--accent-dim);
+}
+
+.click-power {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+/* ---------- ボタン共通 ---------- */
+
+.btn {
+  background: var(--bg-panel-alt);
+  border: 2px solid var(--border-light);
+  color: var(--text);
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  margin: 3px 0;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-small {
+  width: 100%;
+}
+
+.btn-tiny {
+  width: 28px;
+  padding: 2px 0;
+}
+
+.btn-warning {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* ---------- 建物リスト ---------- */
+
+.building-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.building-item {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.building-item .b-name {
+  font-size: 0.85rem;
+}
+
+.building-item .b-detail {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+/* ---------- 生存者 ---------- */
+
+.survivor-box {
+  margin-bottom: 6px;
+}
+
+.survivor-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.survivor-assign {
+  margin-top: 6px;
+  font-size: 0.75rem;
+}
+
+.assign-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.assign-row .assign-name {
+  flex: 1;
+}
+
+/* ---------- プレステージ ---------- */
+
+.prestige-box {
+  margin-bottom: 10px;
+}
+
+.prestige-req {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.prestige-carry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  margin-bottom: 6px;
+}
+
+.knowledge-display {
+  margin: 8px 0;
+  font-size: 0.85rem;
+  color: var(--components);
+}
+
+.upgrade-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.upgrade-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ---------- 実績 ---------- */
+
+.achievement-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.achievement-item {
+  font-size: 0.75rem;
+  padding: 4px 2px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.achievement-item.unlocked {
+  color: var(--ok);
+}
+
+/* ---------- フッター ---------- */
+
+.footer {
+  padding: 10px 16px 20px;
+  border-top: 3px solid var(--border);
+  background: var(--bg-panel);
+}
+
+.log-panel {
+  height: 90px;
+  overflow-y: auto;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  border: 2px solid var(--border);
+  padding: 6px;
+  background: var(--bg);
+}
+
+.log-panel .log-line {
+  padding: 1px 0;
+}
+
+.save-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.save-panel .btn {
+  width: auto;
+}
+
+.save-status {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+/* ---------- モーダル ---------- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal-overlay[hidden] {
+  display: none;
+}
+
+.modal {
+  background: var(--bg-panel);
+  border: 3px solid var(--border-light);
+  padding: 16px;
+  width: min(90vw, 480px);
+}
+
+.modal textarea {
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  border: 2px solid var(--border);
+  font-family: var(--font-main);
+  font-size: 0.8rem;
+  padding: 6px;
+}
+
+.modal-note {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin: 6px 0;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* =========================================================
+   ドット絵風アイコン(CSSのみ)
+   小さな図形の組み合わせで簡易的なピクセルアート風に見せる。
+   ========================================================= */
+
+.pixel-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.icon-large {
+  width: 40px;
+  height: 40px;
+}
+
+/* 木材: 三角の樹冠 + 幹 */
+.icon-wood {
+  background:
+    linear-gradient(var(--wood), var(--wood)) bottom / 100% 30% no-repeat,
+    conic-gradient(from 180deg at 50% 100%, transparent 25%, #6f9c4c 25% 75%, transparent 75%) top / 100% 75% no-repeat;
+}
+
+/* 金属: 角ばった鉱石の塊 */
+.icon-metal {
+  background: var(--metal);
+  clip-path: polygon(20% 0%, 80% 0%, 100% 30%, 100% 70%, 80% 100%, 20% 100%, 0% 70%, 0% 30%);
+}
+.icon-metal::after {
+  content: "";
+  position: absolute;
+  inset: 30%;
+  background: #6c757c;
+}
+
+/* 食料: 麦の束を縦線で簡略表現 */
+.icon-food {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--food) 0 2px,
+    transparent 2px 5px
+  );
+}
+
+/* 電力: 稲妻(clip-pathのジグザグ) */
+.icon-power {
+  background: var(--power);
+  clip-path: polygon(60% 0%, 20% 55%, 45% 55%, 35% 100%, 80% 45%, 55% 45%);
+}
+
+/* 部品: 歯車(角の飛び出た八角形 + 中心の穴) */
+.icon-components {
+  background: var(--components);
+  clip-path: polygon(
+    35% 0%, 65% 0%, 65% 15%, 85% 25%, 100% 35%, 85% 45%,
+    85% 55%, 100% 65%, 85% 75%, 65% 85%, 65% 100%, 35% 100%,
+    35% 85%, 15% 75%, 0% 65%, 15% 55%, 15% 45%, 0% 35%,
+    15% 25%, 35% 15%
+  );
+}
+.icon-components::after {
+  content: "";
+  position: absolute;
+  inset: 35%;
+  background: var(--bg-panel);
+}
+
+/* 生存者: 単純な人型シルエット */
+.icon-survivor {
+  background:
+    radial-gradient(circle at 50% 22%, var(--text) 0 30%, transparent 31%) top / 100% 45% no-repeat,
+    linear-gradient(var(--text), var(--text)) bottom / 60% 55% no-repeat;
+  margin-left: 40px;
+}
+
+/* 脱出船: 台形の船体 */
+.icon-ship {
+  background: var(--accent);
+  clip-path: polygon(30% 0%, 70% 0%, 100% 100%, 0% 100%);
+}
