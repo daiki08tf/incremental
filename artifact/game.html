@@ -73,6 +73,31 @@ button {
   border: 2px solid var(--border-light);
 }
 
+/* ---------- 次の目標 ---------- */
+
+.goal-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 16px;
+  background: var(--bg-panel-alt);
+  border-bottom: 3px solid var(--border);
+}
+
+.goal-label {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  font-size: 0.72rem;
+  color: var(--bg);
+  background: var(--accent);
+  border: 2px solid var(--accent-dim);
+}
+
+.goal-text {
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
 .layout {
   display: grid;
   grid-template-columns: 240px 1fr 300px;
@@ -219,6 +244,27 @@ button {
 .building-item .b-detail {
   font-size: 0.7rem;
   color: var(--text-dim);
+}
+
+.building-item .b-milestone {
+  font-size: 0.68rem;
+  color: var(--accent);
+}
+
+.building-item.locked {
+  opacity: 0.55;
+}
+
+.building-item.locked .b-name {
+  color: var(--text-dim);
+}
+
+.locked-tag {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  border: 2px solid var(--border);
+  padding: 2px 6px;
+  white-space: nowrap;
 }
 
 /* ---------- 生存者 ---------- */
@@ -489,6 +535,11 @@ button {
   </div>
 </header>
 
+<div class="goal-bar">
+  <span class="goal-label">次の目標</span>
+  <span class="goal-text" id="next-goal-text">—</span>
+</div>
+
 <main class="layout">
   <!-- 左カラム: 資源 + 生存者 -->
   <section class="panel panel-resources">
@@ -631,10 +682,29 @@ button {
 /* ---- src/buildings.js ---- */
 /* =========================================================
    buildings.js
-   建物の定義、コスト計算、購入処理。
+   建物の定義、コスト計算、購入処理、
+   マイルストーンと解放条件の正本。
+
+   マイルストーン:
+   棟数が 10 / 25 / 50 に達すると、その建物の「正の生産量」に
+   最終出力倍率(累積乗算ではない)が掛かる。
+   例) 9棟=×1.00, 10棟=×1.15, 24棟=×1.15, 25棟=×1.33,
+       49棟=×1.33, 50棟=×1.60
+   消費量(発電機の木材消費、精製所の金属消費、電力需要)には掛けない。
+
+   倍率は初回ジャンプの実測(手動クリック併用の標準プレイ)で決めている:
+   目標は初回ジャンプ27〜30分・部品500からの空白8分以下。
+   実測 1.15/1.33/1.60 で 27分47秒 / 空白7分57秒 / KP8。
+   (50棟の倍率は初回ジャンプでは全建物が50棟に届かないため影響しない)
    ========================================================= */
 (function (Game) {
   'use strict';
+
+  var DEFAULT_MILESTONES = [
+    { count: 10, multiplier: 1.15 },
+    { count: 25, multiplier: 1.33 },
+    { count: 50, multiplier: 1.60 },
+  ];
 
   Game.BUILDING_DEFS = {
     woodcutter: {
@@ -644,7 +714,9 @@ button {
       costGrowth: 1.13,
       output: { wood: 0.6 },
       consumes: {},
-      unlocked: function () { return true; },
+      milestones: DEFAULT_MILESTONES,
+      unlockText: '最初から建設できる',
+      unlockProgress: function () { return { current: 0, required: 0 }; },
     },
     miner: {
       name: '採掘機',
@@ -653,7 +725,9 @@ button {
       costGrowth: 1.14,
       output: { metal: 0.35 },
       consumes: {},
-      unlocked: function (state) { return state.buildings.woodcutter >= 1; },
+      milestones: DEFAULT_MILESTONES,
+      unlockText: '伐採小屋 1棟',
+      unlockProgress: function (state) { return { current: state.buildings.woodcutter, required: 1 }; },
     },
     farm: {
       name: '農場',
@@ -662,7 +736,9 @@ button {
       costGrowth: 1.14,
       output: { food: 0.5 },
       consumes: {},
-      unlocked: function (state) { return state.survivors.total >= 1; },
+      milestones: DEFAULT_MILESTONES,
+      unlockText: '生存者 1人',
+      unlockProgress: function (state) { return { current: state.survivors.total, required: 1 }; },
     },
     generator: {
       name: '発電機',
@@ -671,7 +747,9 @@ button {
       costGrowth: 1.15,
       output: { power: 1.2 },
       consumes: { wood: 0.3 },
-      unlocked: function (state) { return state.buildings.miner >= 3; },
+      milestones: DEFAULT_MILESTONES,
+      unlockText: '採掘機 3棟',
+      unlockProgress: function (state) { return { current: state.buildings.miner, required: 3 }; },
     },
     refinery: {
       name: '精製所',
@@ -680,8 +758,62 @@ button {
       costGrowth: 1.16,
       output: { components: 0.15 },
       consumes: { metal: 0.6, power: 1 },
-      unlocked: function (state) { return state.buildings.generator >= 1; },
+      milestones: DEFAULT_MILESTONES,
+      unlockText: '発電機 1棟',
+      unlockProgress: function (state) { return { current: state.buildings.generator, required: 1 }; },
     },
+  };
+
+  // 解放進捗(建物定義の unlockProgress が正本。UI側で条件を再定義しない)
+  Game.getUnlockProgress = function (key, state) {
+    var def = Game.BUILDING_DEFS[key];
+    if (!def) return { text: '', current: 0, required: 0, done: false, ratio: 0 };
+    var raw = def.unlockProgress ? def.unlockProgress(state) : { current: 0, required: 0 };
+    var required = Math.max(0, raw.required || 0);
+    var current = Math.max(0, raw.current || 0);
+    return {
+      text: def.unlockText || '',
+      current: required > 0 ? Math.min(current, required) : current,
+      required: required,
+      done: current >= required,
+      ratio: required > 0 ? Math.min(1, current / required) : 1,
+    };
+  };
+
+  Game.isBuildingUnlocked = function (state, key) {
+    return Game.getUnlockProgress(key, state).done;
+  };
+
+  // 現在の棟数に対応する「最終出力倍率」(累積乗算しない)
+  Game.getBuildingOutputMultiplier = function (key, state) {
+    var def = Game.BUILDING_DEFS[key];
+    if (!def || !def.milestones) return 1;
+    var level = (state.buildings && state.buildings[key]) || 0;
+    var multiplier = 1;
+    def.milestones.forEach(function (milestone) {
+      if (level >= milestone.count) multiplier = milestone.multiplier;
+    });
+    return multiplier;
+  };
+
+  // 次に到達できるマイルストーン(全て達成済みなら null)
+  Game.getNextBuildingMilestone = function (key, state) {
+    var def = Game.BUILDING_DEFS[key];
+    if (!def || !def.milestones) return null;
+    var level = (state.buildings && state.buildings[key]) || 0;
+    for (var i = 0; i < def.milestones.length; i++) {
+      var milestone = def.milestones[i];
+      if (level < milestone.count) {
+        return {
+          count: milestone.count,
+          multiplier: milestone.multiplier,
+          level: level,
+          remaining: milestone.count - level,
+          ratio: milestone.count > 0 ? level / milestone.count : 1,
+        };
+      }
+    }
+    return null;
   };
 
   // 建物 key の次の1レベルにかかるコストを返す
@@ -712,7 +844,7 @@ button {
 
   Game.buyBuilding = function (key) {
     var def = Game.BUILDING_DEFS[key];
-    if (!def || !def.unlocked(Game.state)) return false;
+    if (!def || !Game.isBuildingUnlocked(Game.state, key)) return false;
     var cost = Game.getBuildingCost(key);
     if (!Game.canAfford(cost)) return false;
     Game.spend(cost);
@@ -775,8 +907,10 @@ button {
       var consume = {};
       if (level > 0) {
         var survivorBonus = Game.getSurvivorBonus(state, key);
+        // マイルストーン倍率は「正の生産量」にのみ掛ける(消費量には掛けない)
+        var milestoneMult = Game.getBuildingOutputMultiplier(key, state);
         Object.keys(def.output || {}).forEach(function (res) {
-          produce[res] = def.output[res] * level * survivorBonus * globalMult * foodPenalty;
+          produce[res] = def.output[res] * level * survivorBonus * milestoneMult * globalMult * foodPenalty;
         });
         Object.keys(def.consumes || {}).forEach(function (res) {
           consume[res] = def.consumes[res] * level;
@@ -951,6 +1085,31 @@ button {
   Game.canPrestige = function (state) {
     return state.resources.components >= Game.ESCAPE_REQUIREMENTS.components
       && state.resources.metal >= Game.ESCAPE_REQUIREMENTS.metal;
+  };
+
+  // 脱出条件の達成度。部品と金属の両方が必要なので、進捗率は
+  // 「より遅れている方(ボトルネック)」= 両条件の達成率の最小値で表す。
+  // 必要量の正本は ESCAPE_REQUIREMENTS で、UI側では再定義しない。
+  Game.getEscapeProgress = function (state) {
+    var resources = {};
+    var ratios = [];
+    Object.keys(Game.ESCAPE_REQUIREMENTS).forEach(function (res) {
+      var required = Game.ESCAPE_REQUIREMENTS[res];
+      var current = (state.resources && state.resources[res]) || 0;
+      var ratio = required > 0 ? Math.min(1, current / required) : 1;
+      resources[res] = {
+        current: current,
+        required: required,
+        ratio: ratio,
+        done: current >= required,
+      };
+      ratios.push(ratio);
+    });
+    return {
+      resources: resources,
+      ratio: ratios.length > 0 ? Math.min.apply(null, ratios) : 1,
+      done: Game.canPrestige(state),
+    };
   };
 
   Game.calcKnowledgeGain = function (state) {
@@ -1281,7 +1440,35 @@ button {
     list.innerHTML = '';
     Game.BUILDING_KEYS.forEach(function (key) {
       var def = Game.BUILDING_DEFS[key];
-      if (!def.unlocked(state)) return;
+      if (!Game.isBuildingUnlocked(state, key)) {
+        // 未解放でも「次に何が建つか」「あと何が必要か」が分かるようにする
+        var progress = Game.getUnlockProgress(key, state);
+        var lockedLi = document.createElement('li');
+        lockedLi.className = 'building-item locked';
+
+        var lockedIcon = document.createElement('span');
+        lockedIcon.className = 'pixel-icon ' + def.icon;
+
+        var lockedInfo = document.createElement('div');
+        var lockedName = document.createElement('div');
+        lockedName.className = 'b-name';
+        lockedName.textContent = def.name;
+        var lockedDetail = document.createElement('div');
+        lockedDetail.className = 'b-detail';
+        lockedDetail.textContent = '解放条件: ' + progress.text + '（' + progress.current + '/' + progress.required + '）';
+        lockedInfo.appendChild(lockedName);
+        lockedInfo.appendChild(lockedDetail);
+
+        var lockedTag = document.createElement('span');
+        lockedTag.className = 'locked-tag';
+        lockedTag.textContent = '未解放';
+
+        lockedLi.appendChild(lockedIcon);
+        lockedLi.appendChild(lockedInfo);
+        lockedLi.appendChild(lockedTag);
+        list.appendChild(lockedLi);
+        return;
+      }
       var level = state.buildings[key];
       var cost = Game.getBuildingCost(key);
       var affordable = Game.canAfford(cost);
@@ -1315,6 +1502,20 @@ button {
 
       info.appendChild(nameEl);
       info.appendChild(detail);
+
+      // マイルストーンは UI 側で再定義せず、buildings.js の共通関数から取得する
+      var milestoneEl = document.createElement('div');
+      milestoneEl.className = 'b-milestone';
+      var milestoneMult = Game.getBuildingOutputMultiplier(key, state);
+      var nextMilestone = Game.getNextBuildingMilestone(key, state);
+      if (nextMilestone) {
+        milestoneEl.textContent = '生産 ×' + milestoneMult.toFixed(2)
+          + ' / 次の節目: ' + nextMilestone.count + '棟まであと' + nextMilestone.remaining
+          + '棟（達成で×' + nextMilestone.multiplier.toFixed(2) + '）';
+      } else {
+        milestoneEl.textContent = '生産 ×' + milestoneMult.toFixed(2) + ' / マイルストーン全達成';
+      }
+      info.appendChild(milestoneEl);
 
       var buyBtn = document.createElement('button');
       buyBtn.className = 'btn btn-small';
@@ -1444,6 +1645,76 @@ button {
     document.getElementById('planet-count').textContent = '第' + (Game.state.prestige.count + 1) + '惑星';
   }
 
+  // ---------- 次の目標 ----------
+
+  // 次の目標の優先順位:
+  //   1. 未解放の建物がある → 最も達成に近い解放を1件
+  //   2. ジャンプ可能       → 予想知識ポイント
+  //   3. それ以外           → 次の建物マイルストーン と 脱出条件 を達成度で比較し、
+  //                          達成に近い方(同率ならマイルストーン)を1件
+  // 達成度はすべて正本(建物定義・Game.ESCAPE_REQUIREMENTS)から導出し、
+  // この画面側で条件や倍率を二重定義しない。
+  Game.getNextGoal = function (state) {
+    var unlockGoal = null;
+    Game.BUILDING_KEYS.forEach(function (key) {
+      var progress = Game.getUnlockProgress(key, state);
+      if (progress.done) return;
+      if (!unlockGoal || progress.ratio > unlockGoal.ratio) {
+        unlockGoal = {
+          kind: 'unlock',
+          ratio: progress.ratio,
+          text: Game.BUILDING_DEFS[key].name + ' を解放 — ' + progress.text
+            + '（' + progress.current + '/' + progress.required + '）',
+        };
+      }
+    });
+    if (unlockGoal) return unlockGoal;
+
+    if (Game.canPrestige(state)) {
+      return {
+        kind: 'jump',
+        ratio: 1,
+        text: '惑星ジャンプ可能 — 予想知識 +' + Game.calcKnowledgeGain(state) + ' KP',
+      };
+    }
+
+    var milestoneGoal = null;
+    Game.BUILDING_KEYS.forEach(function (key) {
+      var next = Game.getNextBuildingMilestone(key, state);
+      if (!next) return;
+      if (!milestoneGoal || next.ratio > milestoneGoal.ratio) {
+        milestoneGoal = {
+          kind: 'milestone',
+          ratio: next.ratio,
+          text: Game.BUILDING_DEFS[key].name + ' ' + next.count + '棟まであと' + next.remaining
+            + '棟 — 達成で生産 ×' + next.multiplier.toFixed(2),
+        };
+      }
+    });
+
+    var escape = Game.getEscapeProgress(state);
+    var escapeText = Object.keys(escape.resources).map(function (res) {
+      var progress = escape.resources[res];
+      return Game.RESOURCE_NAMES[res] + ' ' + Game.formatNumber(progress.current)
+        + '/' + Game.formatNumber(progress.required);
+    }).join(' ・ ');
+    var escapeGoal = {
+      kind: 'escape',
+      ratio: escape.ratio,
+      text: '脱出船 — ' + escapeText,
+    };
+
+    if (milestoneGoal && milestoneGoal.ratio >= escapeGoal.ratio) return milestoneGoal;
+    return escapeGoal;
+  };
+
+  function renderNextGoal() {
+    var el = document.getElementById('next-goal-text');
+    if (!el) return;
+    var goal = Game.getNextGoal(Game.state);
+    el.textContent = goal ? goal.text : '—';
+  }
+
   function renderSaveStatus(text) {
     document.getElementById('save-status').textContent = text || '';
   }
@@ -1457,6 +1728,7 @@ button {
     renderSurvivors();
     renderPrestige();
     renderAchievements();
+    renderNextGoal();
   };
 
   // ---------- モーダル ----------
@@ -1618,5 +1890,4 @@ button {
 
   document.addEventListener('DOMContentLoaded', boot);
 })(window.Game = window.Game || {});
-
 </script>

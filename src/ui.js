@@ -99,7 +99,35 @@
     list.innerHTML = '';
     Game.BUILDING_KEYS.forEach(function (key) {
       var def = Game.BUILDING_DEFS[key];
-      if (!def.unlocked(state)) return;
+      if (!Game.isBuildingUnlocked(state, key)) {
+        // 未解放でも「次に何が建つか」「あと何が必要か」が分かるようにする
+        var progress = Game.getUnlockProgress(key, state);
+        var lockedLi = document.createElement('li');
+        lockedLi.className = 'building-item locked';
+
+        var lockedIcon = document.createElement('span');
+        lockedIcon.className = 'pixel-icon ' + def.icon;
+
+        var lockedInfo = document.createElement('div');
+        var lockedName = document.createElement('div');
+        lockedName.className = 'b-name';
+        lockedName.textContent = def.name;
+        var lockedDetail = document.createElement('div');
+        lockedDetail.className = 'b-detail';
+        lockedDetail.textContent = '解放条件: ' + progress.text + '（' + progress.current + '/' + progress.required + '）';
+        lockedInfo.appendChild(lockedName);
+        lockedInfo.appendChild(lockedDetail);
+
+        var lockedTag = document.createElement('span');
+        lockedTag.className = 'locked-tag';
+        lockedTag.textContent = '未解放';
+
+        lockedLi.appendChild(lockedIcon);
+        lockedLi.appendChild(lockedInfo);
+        lockedLi.appendChild(lockedTag);
+        list.appendChild(lockedLi);
+        return;
+      }
       var level = state.buildings[key];
       var cost = Game.getBuildingCost(key);
       var affordable = Game.canAfford(cost);
@@ -133,6 +161,20 @@
 
       info.appendChild(nameEl);
       info.appendChild(detail);
+
+      // マイルストーンは UI 側で再定義せず、buildings.js の共通関数から取得する
+      var milestoneEl = document.createElement('div');
+      milestoneEl.className = 'b-milestone';
+      var milestoneMult = Game.getBuildingOutputMultiplier(key, state);
+      var nextMilestone = Game.getNextBuildingMilestone(key, state);
+      if (nextMilestone) {
+        milestoneEl.textContent = '生産 ×' + milestoneMult.toFixed(2)
+          + ' / 次の節目: ' + nextMilestone.count + '棟まであと' + nextMilestone.remaining
+          + '棟（達成で×' + nextMilestone.multiplier.toFixed(2) + '）';
+      } else {
+        milestoneEl.textContent = '生産 ×' + milestoneMult.toFixed(2) + ' / マイルストーン全達成';
+      }
+      info.appendChild(milestoneEl);
 
       var buyBtn = document.createElement('button');
       buyBtn.className = 'btn btn-small';
@@ -262,6 +304,76 @@
     document.getElementById('planet-count').textContent = '第' + (Game.state.prestige.count + 1) + '惑星';
   }
 
+  // ---------- 次の目標 ----------
+
+  // 次の目標の優先順位:
+  //   1. 未解放の建物がある → 最も達成に近い解放を1件
+  //   2. ジャンプ可能       → 予想知識ポイント
+  //   3. それ以外           → 次の建物マイルストーン と 脱出条件 を達成度で比較し、
+  //                          達成に近い方(同率ならマイルストーン)を1件
+  // 達成度はすべて正本(建物定義・Game.ESCAPE_REQUIREMENTS)から導出し、
+  // この画面側で条件や倍率を二重定義しない。
+  Game.getNextGoal = function (state) {
+    var unlockGoal = null;
+    Game.BUILDING_KEYS.forEach(function (key) {
+      var progress = Game.getUnlockProgress(key, state);
+      if (progress.done) return;
+      if (!unlockGoal || progress.ratio > unlockGoal.ratio) {
+        unlockGoal = {
+          kind: 'unlock',
+          ratio: progress.ratio,
+          text: Game.BUILDING_DEFS[key].name + ' を解放 — ' + progress.text
+            + '（' + progress.current + '/' + progress.required + '）',
+        };
+      }
+    });
+    if (unlockGoal) return unlockGoal;
+
+    if (Game.canPrestige(state)) {
+      return {
+        kind: 'jump',
+        ratio: 1,
+        text: '惑星ジャンプ可能 — 予想知識 +' + Game.calcKnowledgeGain(state) + ' KP',
+      };
+    }
+
+    var milestoneGoal = null;
+    Game.BUILDING_KEYS.forEach(function (key) {
+      var next = Game.getNextBuildingMilestone(key, state);
+      if (!next) return;
+      if (!milestoneGoal || next.ratio > milestoneGoal.ratio) {
+        milestoneGoal = {
+          kind: 'milestone',
+          ratio: next.ratio,
+          text: Game.BUILDING_DEFS[key].name + ' ' + next.count + '棟まであと' + next.remaining
+            + '棟 — 達成で生産 ×' + next.multiplier.toFixed(2),
+        };
+      }
+    });
+
+    var escape = Game.getEscapeProgress(state);
+    var escapeText = Object.keys(escape.resources).map(function (res) {
+      var progress = escape.resources[res];
+      return Game.RESOURCE_NAMES[res] + ' ' + Game.formatNumber(progress.current)
+        + '/' + Game.formatNumber(progress.required);
+    }).join(' ・ ');
+    var escapeGoal = {
+      kind: 'escape',
+      ratio: escape.ratio,
+      text: '脱出船 — ' + escapeText,
+    };
+
+    if (milestoneGoal && milestoneGoal.ratio >= escapeGoal.ratio) return milestoneGoal;
+    return escapeGoal;
+  };
+
+  function renderNextGoal() {
+    var el = document.getElementById('next-goal-text');
+    if (!el) return;
+    var goal = Game.getNextGoal(Game.state);
+    el.textContent = goal ? goal.text : '—';
+  }
+
   function renderSaveStatus(text) {
     document.getElementById('save-status').textContent = text || '';
   }
@@ -275,6 +387,7 @@
     renderSurvivors();
     renderPrestige();
     renderAchievements();
+    renderNextGoal();
   };
 
   // ---------- モーダル ----------
