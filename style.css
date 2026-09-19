@@ -71,6 +71,31 @@ button {
   border: 2px solid var(--border-light);
 }
 
+/* ---------- 次の目標 ---------- */
+
+.goal-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 16px;
+  background: var(--bg-panel-alt);
+  border-bottom: 3px solid var(--border);
+}
+
+.goal-label {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  font-size: 0.72rem;
+  color: var(--bg);
+  background: var(--accent);
+  border: 2px solid var(--accent-dim);
+}
+
+.goal-text {
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
 .layout {
   display: grid;
   grid-template-columns: 240px 1fr 300px;
@@ -217,6 +242,27 @@ button {
 .building-item .b-detail {
   font-size: 0.7rem;
   color: var(--text-dim);
+}
+
+.building-item .b-milestone {
+  font-size: 0.68rem;
+  color: var(--accent);
+}
+
+.building-item.locked {
+  opacity: 0.55;
+}
+
+.building-item.locked .b-name {
+  color: var(--text-dim);
+}
+
+.locked-tag {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  border: 2px solid var(--border);
+  padding: 2px 6px;
+  white-space: nowrap;
 }
 
 /* ---------- 生存者 ---------- */
