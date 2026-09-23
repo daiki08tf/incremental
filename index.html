@@ -9,9 +9,13 @@
 <body>
   <header class="header">
     <h1 class="title">漂流コロニー <span class="title-sub">-Ashfall-</span></h1>
-    <div class="planet-badge">
-      <span class="pixel-icon icon-ship" aria-hidden="true"></span>
-      <span id="planet-count">第1惑星</span>
+    <div class="planet-panel">
+      <div class="planet-badge">
+        <span class="pixel-icon icon-ship" aria-hidden="true"></span>
+        <span id="planet-count">第1惑星</span>
+      </div>
+      <div class="planet-current" id="planet-current">惑星: 標準環境 — 変動なし</div>
+      <div class="planet-next" id="planet-next"></div>
     </div>
   </header>
 
@@ -111,6 +115,7 @@
 
   <script src="src/state.js"></script>
   <script src="src/buildings.js"></script>
+  <script src="src/planets.js"></script>
   <script src="src/resources.js"></script>
   <script src="src/survivors.js"></script>
   <script src="src/prestige.js"></script>

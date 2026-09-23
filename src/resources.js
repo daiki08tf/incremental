@@ -49,10 +49,12 @@
       var consume = {};
       if (level > 0) {
         var survivorBonus = Game.getSurvivorBonus(state, key);
-        // マイルストーン倍率は「正の生産量」にのみ掛ける(消費量には掛けない)
+        // マイルストーン倍率・惑星環境倍率は「正の生産量」にのみ掛ける(消費量には掛けない)
         var milestoneMult = Game.getBuildingOutputMultiplier(key, state);
         Object.keys(def.output || {}).forEach(function (res) {
-          produce[res] = def.output[res] * level * survivorBonus * milestoneMult * globalMult * foodPenalty;
+          // 倍率のレイヤー: 素の生産 × 生存者 × 全体 × 建物マイルストーン × 惑星環境
+          var planetMult = Game.getPlanetResourceMultiplier(state, res);
+          produce[res] = def.output[res] * level * survivorBonus * milestoneMult * globalMult * planetMult * foodPenalty;
         });
         Object.keys(def.consumes || {}).forEach(function (res) {
           consume[res] = def.consumes[res] * level;

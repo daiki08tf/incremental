@@ -146,7 +146,11 @@
       var detail = document.createElement('div');
       detail.className = 'b-detail';
       var outputParts = Object.keys(def.output).map(function (res) {
-        var perSec = def.output[res] * level * Game.getSurvivorBonus(state, key);
+        // 表示も生産計算と同じ共通関数を使う(素の生産 × 生存者 × 全体 × マイルストーン × 惑星環境)
+        var perSec = def.output[res] * level * Game.getSurvivorBonus(state, key)
+          * Game.getBuildingOutputMultiplier(key, state)
+          * Game.getGlobalMultiplier(state)
+          * Game.getPlanetResourceMultiplier(state, res);
         return '+' + Game.formatNumber(perSec) + Game.RESOURCE_NAMES[res] + '/s';
       });
       var consumeParts = Object.keys(def.consumes).map(function (res) {
@@ -301,7 +305,26 @@
   }
 
   function renderHeader() {
-    document.getElementById('planet-count').textContent = '第' + (Game.state.prestige.count + 1) + '惑星';
+    var state = Game.state;
+    var planet = Game.getCurrentPlanet(state);
+    document.getElementById('planet-count').textContent = '第' + (state.prestige.count + 1) + '惑星';
+
+    // 惑星名と環境効果は planets.js の定義から生成する(UI側で数値を持たない)
+    var currentEl = document.getElementById('planet-current');
+    if (currentEl) {
+      currentEl.textContent = '惑星: ' + planet.name + ' — ' + Game.formatPlanetEffects(planet);
+    }
+
+    // ジャンプ可能なときだけ、次の惑星を事前表示する
+    var nextEl = document.getElementById('planet-next');
+    if (nextEl) {
+      if (Game.canPrestige(state)) {
+        var next = Game.getNextPlanet(state);
+        nextEl.textContent = '次の惑星: ' + next.name + ' — ' + Game.formatPlanetEffects(next);
+      } else {
+        nextEl.textContent = '';
+      }
+    }
   }
 
   // ---------- 次の目標 ----------

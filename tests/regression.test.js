@@ -16,7 +16,7 @@ var path = require('path');
 var vm = require('vm');
 
 var ROOT = path.resolve(__dirname, '..');
-var SCRIPT_ORDER = ['state', 'buildings', 'resources', 'survivors', 'prestige', 'achievements', 'save', 'ui'];
+var SCRIPT_ORDER = ['state', 'buildings', 'planets', 'resources', 'survivors', 'prestige', 'achievements', 'save', 'ui'];
 var ARTIFACT_ORDER = SCRIPT_ORDER.concat(['main']);
 var MILESTONES = [
   { count: 10, multiplier: 1.15 },
@@ -426,6 +426,276 @@ test('次の目標はマイルストーンと脱出条件の達成度を比べ�
   late.resources.components = 0;
   assert.strictEqual(Game.getNextGoal(late).kind, 'escape');
 });
+
+// ---------- 惑星環境モディファイア(Candidate B) ----------
+
+function planetState(prestigeCount) {
+  var state = Game.createInitialState();
+  state.prestige.count = prestigeCount;
+  return state;
+}
+
+test('prestige count から現在惑星を導出する(0=標準 / 1..4で循環)', function () {
+  var expected = { 0: '標準環境', 1: '鉱脈惑星', 2: '森林惑星', 3: '腐食惑星', 4: '工業遺構惑星', 5: '鉱脈惑星' };
+  Object.keys(expected).forEach(function (count) {
+    var state = planetState(Number(count));
+    assert.strictEqual(Game.getCurrentPlanet(state).name, expected[count], 'count=' + count);
+  });
+  // 2周目以降も同じ周期で回る(5→1, 8→4, 9→1)
+  assert.strictEqual(Game.getCurrentPlanet(planetState(8)).name, '工業遺構惑星');
+  assert.strictEqual(Game.getCurrentPlanet(planetState(9)).name, '鉱脈惑星');
+  assert.strictEqual(Game.getCurrentPlanet(planetState(13)).name, '鉱脈惑星');
+});
+
+test('次の惑星を事前に取得できる', function () {
+  assert.strictEqual(Game.getNextPlanet(planetState(0)).name, '鉱脈惑星');
+  assert.strictEqual(Game.getNextPlanet(planetState(1)).name, '森林惑星');
+  assert.strictEqual(Game.getNextPlanet(planetState(4)).name, '鉱脈惑星');
+});
+
+test('標準以外の惑星は「得る資源」と「不得意な資源」を両方持つ(全面buff/nerfでない)', function () {
+  var penaltyResources = [];
+  Game.PLANET_DEFS.slice(1).forEach(function (planet) {
+    var mods = planet.modifiers;
+    var boosted = Object.keys(mods).filter(function (res) { return mods[res] > 1; });
+    var penalized = Object.keys(mods).filter(function (res) { return mods[res] < 1; });
+    assert.ok(boosted.length >= 1, planet.name + ' に得な資源がない');
+    assert.ok(penalized.length >= 1, planet.name + ' に不得意な資源がない');
+    penalized.forEach(function (res) { penaltyResources.push(res); });
+  });
+  // 各惑星の「不得意な資源」は重複しない(=惑星ごとに違う弱点を持つ)
+  var unique = penaltyResources.filter(function (res, index) {
+    return penaltyResources.indexOf(res) === index;
+  });
+  assert.strictEqual(unique.length, penaltyResources.length, '弱点が重複: ' + penaltyResources.join(','));
+});
+
+test('第1周(prestige 0)は標準惑星で全資源×1.00(初回ジャンプ時間を変えない)', function () {
+  var state = Game.createInitialState();
+  assert.strictEqual(Game.getCurrentPlanet(state).name, '標準環境');
+  Game.RESOURCE_KEYS.forEach(function (res) {
+    assert.strictEqual(Game.getPlanetResourceMultiplier(state, res), 1, res + ' の倍率');
+  });
+  // Candidate A と同じ生産量(素の出力 × マイルストーン)から変化しない
+  state.buildings.woodcutter = 10;
+  withState(state, function () { Game.tick(1); });
+  assert.ok(
+    Math.abs(state.resources.wood - 0.6 * 10 * 1.15) < 1e-9,
+    '木材生産=' + state.resources.wood
+  );
+});
+
+test('正の生産に惑星倍率が掛かる(鉱脈惑星: 金属+18% / 木材-10%)', function () {
+  var ore = planetState(1);
+  ore.buildings.miner = 10; // マイルストーン×1.15 と併用
+  withState(ore, function () { Game.tick(1); });
+  assert.ok(
+    Math.abs(ore.resources.metal - 0.35 * 10 * 1.15 * 1.18) < 1e-9,
+    '金属生産=' + ore.resources.metal
+  );
+
+  var forest = planetState(1);
+  forest.buildings.woodcutter = 10;
+  withState(forest, function () { Game.tick(1); });
+  assert.ok(
+    Math.abs(forest.resources.wood - 0.6 * 10 * 1.15 * 0.90) < 1e-9,
+    '木材生産=' + forest.resources.wood
+  );
+
+  // 定義にない資源・state が欠けた場合は ×1.00
+  assert.strictEqual(Game.getPlanetResourceMultiplier(ore, 'unknown'), 1);
+  assert.strictEqual(Game.getPlanetResourceMultiplier({}, 'metal'), 1);
+
+  // 森林惑星(prestige 2): 木材 ×1.25
+  var forest = planetState(2);
+  forest.buildings.woodcutter = 10;
+  withState(forest, function () { Game.tick(1); });
+  assert.ok(
+    Math.abs(forest.resources.wood - 0.6 * 10 * 1.15 * 1.25) < 1e-9,
+    '森林惑星の木材=' + forest.resources.wood
+  );
+
+  // 腐食惑星(prestige 3): 部品 ×0.85(生産のみ。精製所の金属消費は素のまま)
+  var corroded = planetState(3);
+  corroded.buildings.generator = 1;
+  corroded.buildings.refinery = 1;
+  corroded.resources.metal = 100;
+  withState(corroded, function () { Game.tick(1); });
+  assert.ok(
+    Math.abs(corroded.resources.components - 0.15 * 0.85) < 1e-9,
+    '腐食惑星の部品=' + corroded.resources.components
+  );
+  assert.ok(
+    Math.abs((100 - corroded.resources.metal) - 0.6) < 1e-9,
+    '腐食惑星の金属消費=' + (100 - corroded.resources.metal)
+  );
+});
+
+test('消費量には惑星倍率が掛からない', function () {
+  // 鉱脈惑星(metal×1.18 / wood×0.90)でも消費側は素の値のまま
+  // (電力需給を成立させるため発電機を1棟置く。これが無いと精製所は停止する)
+  var ore = planetState(1);
+  ore.buildings.generator = 1;
+  ore.buildings.refinery = 1;
+  ore.resources.wood = 100;
+  ore.resources.metal = 100;
+  withState(ore, function () { Game.tick(1); });
+  assert.ok(Math.abs((100 - ore.resources.metal) - 0.6) < 1e-9, '金属消費=' + (100 - ore.resources.metal));
+  assert.ok(Math.abs((100 - ore.resources.wood) - 0.3) < 1e-9, '木材消費=' + (100 - ore.resources.wood));
+  assert.ok(Math.abs(Game.lastPowerInfo.demand - 1) < 1e-9, '電力需要=' + Game.lastPowerInfo.demand);
+
+  // 発電機の木材消費も惑星倍率の影響を受けない(工業遺構惑星でも 0.3/s のまま)
+  var industrial = planetState(4);
+  industrial.buildings.generator = 1;
+  industrial.resources.wood = 100;
+  withState(industrial, function () { Game.tick(1); });
+  assert.ok(Math.abs((100 - industrial.resources.wood) - 0.3) < 1e-9, '木材消費=' + (100 - industrial.resources.wood));
+
+  // 電力需要は素の 1/s、供給だけが ×0.90 される
+  var industrialFactory = planetState(4);
+  industrialFactory.buildings.generator = 1;
+  industrialFactory.buildings.refinery = 1;
+  withState(industrialFactory, function () { Game.tick(1); });
+  assert.ok(Math.abs(Game.lastPowerInfo.supply - 1.2 * 0.90) < 1e-9, '電力供給=' + Game.lastPowerInfo.supply);
+  assert.ok(Math.abs(Game.lastPowerInfo.demand - 1) < 1e-9, '電力需要=' + Game.lastPowerInfo.demand);
+});
+
+test('手動クリックには惑星倍率が掛からない', function () {
+  var ore = planetState(1); // 木材には -10% が乗る惑星
+  withState(ore, function () {
+    assert.strictEqual(Game.getClickAmount(), 1, 'クリック量');
+    Game.doManualClick();
+  });
+  assert.strictEqual(ore.resources.wood, 1, 'クリックで得た木材=' + ore.resources.wood);
+});
+
+test('建物マイルストーン倍率と惑星倍率が積で併用される', function () {
+  var ore = planetState(1);
+  ore.buildings.miner = 25; // ×1.33
+  withState(ore, function () { Game.tick(1); });
+
+  var standard = Game.createInitialState();
+  standard.buildings.miner = 25;
+  withState(standard, function () { Game.tick(1); });
+
+  assert.ok(
+    Math.abs(ore.resources.metal - 0.35 * 25 * 1.33 * 1.18) < 1e-9,
+    '金属生産=' + ore.resources.metal
+  );
+  // 惑星倍率だけが比として掛かる(加算でも二重適用でもない)
+  assert.ok(
+    Math.abs(ore.resources.metal / standard.resources.metal - 1.18) < 1e-9,
+    '比=' + (ore.resources.metal / standard.resources.metal)
+  );
+});
+
+test('旧セーブ(prestige 欠落)でも惑星は標準として動く', function () {
+  var state = Game.normalizeState({ resources: { wood: 5 }, buildings: { woodcutter: 3 } });
+  assert.strictEqual(state.prestige.count, 0);
+  assert.strictEqual(Game.getCurrentPlanet(state).name, '標準環境');
+  Game.RESOURCE_KEYS.forEach(function (res) {
+    assert.strictEqual(Game.getPlanetResourceMultiplier(state, res), 1, res + ' の倍率');
+  });
+  withState(state, function () { Game.tick(1); });
+  assert.ok(!Number.isNaN(state.resources.wood), '木材が NaN');
+});
+
+test('state に惑星フィールドを保存しない(セーブコードでも prestige count から再現)', function () {
+  var state = planetState(3);
+  assert.strictEqual('planet' in state, false, 'state.planet が存在する');
+  var restored = Game.decodeSaveCode(Game.encodeSaveCode(state));
+  assert.strictEqual(restored.prestige.count, 3);
+  assert.strictEqual(Game.getCurrentPlanet(restored).name, '腐食惑星');
+  Game.RESOURCE_KEYS.forEach(function (res) {
+    assert.strictEqual(
+      Game.getPlanetResourceMultiplier(restored, res),
+      Game.getPlanetResourceMultiplier(state, res),
+      res + ' の倍率'
+    );
+  });
+});
+
+test('prestige 後に次の惑星へ切り替わり、到着ログに惑星名と環境効果が出る', function () {
+  var state = Game.createInitialState();
+  assert.strictEqual(Game.getCurrentPlanet(state).name, '標準環境');
+  state.resources.components = Game.ESCAPE_REQUIREMENTS.components;
+  state.resources.metal = Game.ESCAPE_REQUIREMENTS.metal;
+
+  var logs = [];
+  var originalAddLog = Game.addLog;
+  Game.addLog = function (message) { logs.push(message); };
+  try {
+    withState(state, function () {
+      assert.strictEqual(Game.doPrestige(0), true);
+    });
+  } finally {
+    Game.addLog = originalAddLog;
+  }
+
+  assert.strictEqual(state.prestige.count, 1);
+  assert.strictEqual(Game.getCurrentPlanet(state).name, '鉱脈惑星');
+  assert.strictEqual(Game.getNextPlanet(state).name, '森林惑星');
+  assert.strictEqual(logs.length, 1, 'ログ件数=' + logs.length);
+  assert.ok(logs[0].indexOf('鉱脈惑星') !== -1, '惑星名がログにない: ' + logs[0]);
+  assert.ok(logs[0].indexOf('金属生産 +18%') !== -1, '環境効果がログにない: ' + logs[0]);
+  assert.ok(logs[0].indexOf('木材生産 -10%') !== -1, '環境効果がログにない: ' + logs[0]);
+});
+
+test('生産計算とUIが同じ惑星倍率関数を参照する', function () {
+  var resourcesSrc = fs.readFileSync(path.join(ROOT, 'src/resources.js'), 'utf8');
+  var uiSrc = fs.readFileSync(path.join(ROOT, 'src/ui.js'), 'utf8');
+  var planetsSrc = fs.readFileSync(path.join(ROOT, 'src/planets.js'), 'utf8');
+  assert.ok(resourcesSrc.indexOf('Game.getPlanetResourceMultiplier(') !== -1, 'resources.js が共通関数を使っていない');
+  assert.ok(uiSrc.indexOf('Game.getPlanetResourceMultiplier(') !== -1, 'ui.js が共通関数を使っていない');
+  assert.ok(planetsSrc.indexOf('Game.getPlanetResourceMultiplier = function') !== -1, '共通関数が定義されていない');
+  // 正本(planets.js)の倍率が UI に数値で書き写されていないこと
+  Game.PLANET_DEFS.forEach(function (planet) {
+    Object.keys(planet.modifiers).forEach(function (res) {
+      var multiplier = planet.modifiers[res];
+      if (multiplier === 1) return;
+      assert.strictEqual(
+        uiSrc.indexOf(multiplier.toFixed(2)), -1,
+        'ui.js に惑星倍率リテラル ' + multiplier.toFixed(2) + ' が二重定義されている'
+      );
+    });
+  });
+});
+
+test('UIが現在惑星とジャンプ可能時の次の惑星を表示する', function () {
+  var dom = makeStubDom();
+  var game = loadGame({ document: dom });
+  var state = game.createInitialState();
+  state.prestige.count = 1;
+  game.state = state;
+  game.render = game._uiRender;
+  game.initUI();
+  game.render();
+
+  var current = dom.getElementById('planet-current').textContent;
+  assert.ok(current.indexOf('鉱脈惑星') !== -1, '現在惑星が出ていない: ' + current);
+  assert.ok(current.indexOf('金属 +18%') !== -1, '環境効果が出ていない: ' + current);
+  assert.strictEqual(dom.getElementById('planet-count').textContent, '第2惑星');
+  // ジャンプ不可のうちは次の惑星を出さない
+  assert.strictEqual(dom.getElementById('planet-next').textContent, '');
+
+  state.resources.components = game.ESCAPE_REQUIREMENTS.components;
+  state.resources.metal = game.ESCAPE_REQUIREMENTS.metal;
+  game.render();
+  var next = dom.getElementById('planet-next').textContent;
+  assert.ok(next.indexOf('森林惑星') !== -1, '次の惑星が出ていない: ' + next);
+  assert.ok(next.indexOf('木材 +25%') !== -1, '次の惑星の効果が出ていない: ' + next);
+  assert.ok(next.indexOf('金属 -15%') !== -1, '次の惑星の効果が出ていない: ' + next);
+});
+
+test('index.html の script 読み込み順が正本と一致する', function () {
+  var html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  var order = [];
+  var re = /<script src="src\/([a-z]+)\.js"><\/script>/g;
+  var match;
+  while ((match = re.exec(html)) !== null) order.push(match[1]);
+  assert.strictEqual(order.join(','), ARTIFACT_ORDER.join(','));
+});
+
 // ---------- 描画スモークテスト(DOMスタブ) ----------
 
 test('DOMスタブ上で initUI / render が例外を出さず、未解放行と目標を描画する', function () {

@@ -71,6 +71,46 @@ button {
   border: 2px solid var(--border-light);
 }
 
+/* 惑星環境のコンパクト表示(現在 + ジャンプ可能時のみ次の惑星) */
+.planet-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  text-align: right;
+}
+
+.planet-current {
+  font-size: 0.72rem;
+  color: var(--text);
+}
+
+.planet-next {
+  font-size: 0.7rem;
+  color: var(--accent);
+}
+
+.planet-next:empty {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .header {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .planet-panel {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .planet-current,
+  .planet-next {
+    font-size: 0.66rem;
+  }
+}
+
 /* ---------- 次の目標 ---------- */
 
 .goal-bar {

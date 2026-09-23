@@ -78,7 +78,13 @@
     state.prestige.knowledge += kpGained;
     state.stats.totalKnowledgeEarned += kpGained;
 
-    Game.addLog('第' + (state.prestige.count + 1) + '惑星へジャンプしました(知識+' + kpGained + ')');
+    // 到着した惑星と環境効果をログに残す(惑星名・効果は planets.js が正本)
+    var planet = Game.getCurrentPlanet(state);
+    Game.addLog(
+      '第' + (state.prestige.count + 1) + '惑星「' + planet.name + '」へ到着。'
+      + Game.formatPlanetEffects(planet, { separator: '、', productionSuffix: true })
+      + '。(知識 +' + kpGained + ')'
+    );
     Game.checkAchievements();
     Game.render();
     return true;
