@@ -49,8 +49,10 @@
       var consume = {};
       if (level > 0) {
         var survivorBonus = Game.getSurvivorBonus(state, key);
+        // マイルストーン倍率は「正の生産量」にのみ掛ける(消費量には掛けない)
+        var milestoneMult = Game.getBuildingOutputMultiplier(key, state);
         Object.keys(def.output || {}).forEach(function (res) {
-          produce[res] = def.output[res] * level * survivorBonus * globalMult * foodPenalty;
+          produce[res] = def.output[res] * level * survivorBonus * milestoneMult * globalMult * foodPenalty;
         });
         Object.keys(def.consumes || {}).forEach(function (res) {
           consume[res] = def.consumes[res] * level;

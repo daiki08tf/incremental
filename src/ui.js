@@ -66,6 +66,20 @@
     return node;
   }
 
+  // 操作ボタンを作る。どの操作か(action)と対象(key)は要素のプロパティに持たせ、
+  // クリックはコンテナ側でまとめて受ける(handleDelegatedClick)
+  function actionButton(className, text, action, key, label) {
+    var btn = el('button', className, text);
+    btn.gameAction = action;
+    btn.gameKey = key;
+    if (label) btn.title = label;
+    return btn;
+  }
+
+  function setClass(node, className) {
+    if (node.className !== className) node.className = className;
+  }
+
   // 値が変わった時だけDOMに書き込む(無駄な再レイアウトを避ける)
   function setText(node, text) {
     text = String(text);
@@ -108,15 +122,17 @@
       var info = el('div');
       var name = el('div', 'b-name');
       var detail = el('div', 'b-detail');
+      var milestone = el('div', 'b-milestone');
       info.appendChild(name);
       info.appendChild(detail);
-      var btn = el('button', 'btn btn-small', '建設');
-      btn.dataset.action = 'build';
-      btn.dataset.key = key;
+      info.appendChild(milestone);
+      var btn = actionButton('btn btn-small', '建設', 'build', key);
+      var lockedTag = el('span', 'locked-tag', '未解放');
       li.appendChild(info);
       li.appendChild(btn);
+      li.appendChild(lockedTag);
       bList.appendChild(li);
-      refs.buildings[key] = { row: li, name: name, detail: detail, btn: btn };
+      refs.buildings[key] = { row: li, name: name, detail: detail, milestone: milestone, btn: btn, lockedTag: lockedTag };
     });
 
     // 生存者の割り当て
@@ -130,15 +146,9 @@
     Game.BUILDING_KEYS.forEach(function (key) {
       var row = el('div', 'assign-row');
       row.appendChild(el('span', 'assign-name', Game.BUILDING_DEFS[key].name));
-      var minus = el('button', 'btn btn-tiny', '-');
-      minus.dataset.action = 'unassign';
-      minus.dataset.key = key;
-      minus.setAttribute('aria-label', Game.BUILDING_DEFS[key].name + 'から外す');
+      var minus = actionButton('btn btn-tiny', '-', 'unassign', key, Game.BUILDING_DEFS[key].name + 'から外す');
       var count = el('span', 'assign-count');
-      var plus = el('button', 'btn btn-tiny', '+');
-      plus.dataset.action = 'assign';
-      plus.dataset.key = key;
-      plus.setAttribute('aria-label', Game.BUILDING_DEFS[key].name + 'に割り当てる');
+      var plus = actionButton('btn btn-tiny', '+', 'assign', key, Game.BUILDING_DEFS[key].name + 'に割り当てる');
       row.appendChild(minus);
       row.appendChild(count);
       row.appendChild(plus);
@@ -152,9 +162,7 @@
     Game.PRESTIGE_UPGRADE_KEYS.forEach(function (key) {
       var li = el('li', 'upgrade-item');
       var label = el('span');
-      var btn = el('button', 'btn btn-tiny btn-cost');
-      btn.dataset.action = 'upgrade';
-      btn.dataset.key = key;
+      var btn = actionButton('btn btn-tiny btn-cost', '', 'upgrade', key);
       li.appendChild(label);
       li.appendChild(btn);
       uList.appendChild(li);
@@ -195,17 +203,29 @@
     Game.BUILDING_KEYS.forEach(function (key) {
       var def = Game.BUILDING_DEFS[key];
       var r = refs.buildings[key];
-      var unlocked = def.unlocked(state);
-      setHidden(r.row, !unlocked);
-      if (!unlocked) return;
+      var unlocked = Game.isBuildingUnlocked(state, key);
+      setClass(r.row, unlocked ? 'building-item' : 'building-item locked');
+      setHidden(r.btn, !unlocked);
+      setHidden(r.lockedTag, unlocked);
+      setHidden(r.milestone, !unlocked);
+
+      if (!unlocked) {
+        // 未解放でも「次に何が建つか」「あと何が必要か」が分かるようにする
+        var progress = Game.getUnlockProgress(key, state);
+        setText(r.name, def.name);
+        setText(r.detail, '解放条件: ' + progress.text + '（' + progress.current + '/' + progress.required + '）');
+        return;
+      }
 
       var level = state.buildings[key];
       var cost = Game.getBuildingCost(key);
       var bonus = Game.getSurvivorBonus(state, key);
+      // マイルストーン倍率は UI 側で再定義せず、buildings.js の共通関数から取得する
+      var milestoneMult = Game.getBuildingOutputMultiplier(key, state);
       var parts = [];
       if (level > 0) {
         Object.keys(def.output).forEach(function (res) {
-          parts.push('+' + Game.formatNumber(def.output[res] * level * bonus) + Game.RESOURCE_NAMES[res] + '/s');
+          parts.push('+' + Game.formatNumber(def.output[res] * level * bonus * milestoneMult) + Game.RESOURCE_NAMES[res] + '/s');
         });
         Object.keys(def.consumes).forEach(function (res) {
           parts.push('-' + Game.formatNumber(def.consumes[res] * level) + Game.RESOURCE_NAMES[res] + '/s');
@@ -217,8 +237,14 @@
         return Game.formatNumber(cost[res]) + Game.RESOURCE_NAMES[res];
       }).join(' + ');
 
+      var next = Game.getNextBuildingMilestone(key, state);
+      var milestoneText = '生産 ×' + milestoneMult.toFixed(2) + (next
+        ? ' / 次の節目: ' + next.count + '棟まであと' + next.remaining + '棟（達成で×' + next.multiplier.toFixed(2) + '）'
+        : ' / マイルストーン全達成');
+
       setText(r.name, def.name + ' Lv.' + level);
       setText(r.detail, parts.join(' ') + ' / 次: ' + costText);
+      setText(r.milestone, milestoneText);
       setDisabled(r.btn, !Game.canAfford(cost));
     });
   }
@@ -295,6 +321,76 @@
     setText(document.getElementById('planet-count'), '第' + (Game.state.prestige.count + 1) + '惑星');
   }
 
+  // ---------- 次の目標 ----------
+
+  // 次の目標の優先順位:
+  //   1. 未解放の建物がある → 最も達成に近い解放を1件
+  //   2. ジャンプ可能       → 予想知識ポイント
+  //   3. それ以外           → 次の建物マイルストーン と 脱出条件 を達成度で比較し、
+  //                          達成に近い方(同率ならマイルストーン)を1件
+  // 達成度はすべて正本(建物定義・Game.ESCAPE_REQUIREMENTS)から導出し、
+  // この画面側で条件や倍率を二重定義しない。
+  Game.getNextGoal = function (state) {
+    var unlockGoal = null;
+    Game.BUILDING_KEYS.forEach(function (key) {
+      var progress = Game.getUnlockProgress(key, state);
+      if (progress.done) return;
+      if (!unlockGoal || progress.ratio > unlockGoal.ratio) {
+        unlockGoal = {
+          kind: 'unlock',
+          ratio: progress.ratio,
+          text: Game.BUILDING_DEFS[key].name + ' を解放 — ' + progress.text
+            + '（' + progress.current + '/' + progress.required + '）',
+        };
+      }
+    });
+    if (unlockGoal) return unlockGoal;
+
+    if (Game.canPrestige(state)) {
+      return {
+        kind: 'jump',
+        ratio: 1,
+        text: '惑星ジャンプ可能 — 予想知識 +' + Game.calcKnowledgeGain(state) + ' KP',
+      };
+    }
+
+    var milestoneGoal = null;
+    Game.BUILDING_KEYS.forEach(function (key) {
+      var next = Game.getNextBuildingMilestone(key, state);
+      if (!next) return;
+      if (!milestoneGoal || next.ratio > milestoneGoal.ratio) {
+        milestoneGoal = {
+          kind: 'milestone',
+          ratio: next.ratio,
+          text: Game.BUILDING_DEFS[key].name + ' ' + next.count + '棟まであと' + next.remaining
+            + '棟 — 達成で生産 ×' + next.multiplier.toFixed(2),
+        };
+      }
+    });
+
+    var escape = Game.getEscapeProgress(state);
+    var escapeText = Object.keys(escape.resources).map(function (res) {
+      var progress = escape.resources[res];
+      return Game.RESOURCE_NAMES[res] + ' ' + Game.formatNumber(progress.current)
+        + '/' + Game.formatNumber(progress.required);
+    }).join(' ・ ');
+    var escapeGoal = {
+      kind: 'escape',
+      ratio: escape.ratio,
+      text: '脱出船 — ' + escapeText,
+    };
+
+    if (milestoneGoal && milestoneGoal.ratio >= escapeGoal.ratio) return milestoneGoal;
+    return escapeGoal;
+  };
+
+  function renderNextGoal() {
+    var node = document.getElementById('next-goal-text');
+    if (!node) return;
+    var goal = Game.getNextGoal(Game.state);
+    setText(node, goal ? goal.text : '—');
+  }
+
   function renderSaveStatus(text) {
     setText(document.getElementById('save-status'), text || '');
   }
@@ -309,6 +405,7 @@
     renderSurvivors();
     renderPrestige();
     renderAchievements();
+    renderNextGoal();
   };
 
   // ---------- モーダル(セーブコード入出力 / 確認ダイアログ) ----------
@@ -391,10 +488,11 @@
   // ---------- イベントバインド ----------
 
   function handleDelegatedClick(e) {
-    var btn = e.target.closest('button[data-action]');
+    var btn = e.target;
+    while (btn && !btn.gameAction) btn = btn.parentNode;
     if (!btn || btn.disabled) return;
-    var key = btn.dataset.key;
-    switch (btn.dataset.action) {
+    var key = btn.gameKey;
+    switch (btn.gameAction) {
       case 'build': Game.buyBuilding(key); break;
       case 'assign': Game.assignSurvivor(key); break;
       case 'unassign': Game.unassignSurvivor(key); break;

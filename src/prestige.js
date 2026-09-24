@@ -20,6 +20,31 @@
       && state.resources.metal >= Game.ESCAPE_REQUIREMENTS.metal;
   };
 
+  // 脱出条件の達成度。部品と金属の両方が必要なので、進捗率は
+  // 「より遅れている方(ボトルネック)」= 両条件の達成率の最小値で表す。
+  // 必要量の正本は ESCAPE_REQUIREMENTS で、UI側では再定義しない。
+  Game.getEscapeProgress = function (state) {
+    var resources = {};
+    var ratios = [];
+    Object.keys(Game.ESCAPE_REQUIREMENTS).forEach(function (res) {
+      var required = Game.ESCAPE_REQUIREMENTS[res];
+      var current = (state.resources && state.resources[res]) || 0;
+      var ratio = required > 0 ? Math.min(1, current / required) : 1;
+      resources[res] = {
+        current: current,
+        required: required,
+        ratio: ratio,
+        done: current >= required,
+      };
+      ratios.push(ratio);
+    });
+    return {
+      resources: resources,
+      ratio: ratios.length > 0 ? Math.min.apply(null, ratios) : 1,
+      done: Game.canPrestige(state),
+    };
+  };
+
   Game.calcKnowledgeGain = function (state) {
     var score = (state.resources.components * 2 + state.resources.metal) / 40;
     return Math.max(1, Math.floor(Math.sqrt(score)));
