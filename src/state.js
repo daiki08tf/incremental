@@ -10,6 +10,7 @@
   Game.PRESTIGE_UPGRADE_KEYS = ['productionBoost', 'startingWood', 'populationCap', 'foodEfficiency'];
 
   Game.FOOD_PER_SURVIVOR = 0.15; // 1人あたりの食料消費/秒
+  Game.STARTING_FOOD = 30; // 墜落船から回収した非常食(農場ができるまでのつなぎ)
   Game.BASE_POPULATION_CAP = 5;
   Game.MAX_CARRY_SURVIVORS = 3;
   Game.SAVE_KEY = 'ashfall_save_v1';
@@ -19,7 +20,7 @@
 
   function createInitialState() {
     return {
-      resources: { wood: 0, metal: 0, food: 0, power: 0, components: 0 },
+      resources: { wood: 0, metal: 0, food: Game.STARTING_FOOD, power: 0, components: 0 },
       buildings: { woodcutter: 0, miner: 0, farm: 0, generator: 0, refinery: 0 },
       survivors: {
         total: 0,

@@ -28,6 +28,11 @@
   box-sizing: border-box;
 }
 
+/* hidden属性で隠す要素を、クラス側の display 指定(flex/grid)に負けさせない */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   font-family: var(--font-main);
@@ -362,10 +367,6 @@ button {
   z-index: 50;
 }
 
-.modal-overlay[hidden] {
-  display: none;
-}
-
 .modal {
   background: var(--bg-panel);
   border: 3px solid var(--border-light);
@@ -384,9 +385,35 @@ button {
 }
 
 .modal-note {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--text-dim);
-  margin: 6px 0;
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+.modal-note.is-error {
+  color: var(--danger);
+}
+
+.modal h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.modal-actions .btn {
+  width: auto;
+}
+
+.btn-cost {
+  width: auto;
+  min-width: 36px;
+  padding: 2px 6px;
+}
+
+.btn:focus-visible,
+.click-area:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .modal-actions {
@@ -469,7 +496,6 @@ button {
   background:
     radial-gradient(circle at 50% 22%, var(--text) 0 30%, transparent 31%) top / 100% 45% no-repeat,
     linear-gradient(var(--text), var(--text)) bottom / 60% 55% no-repeat;
-  margin-left: 40px;
 }
 
 /* 脱出船: 台形の船体 */

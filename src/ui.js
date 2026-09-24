@@ -8,7 +8,6 @@
   Game.RESOURCE_NAMES = { wood: '木材', metal: '金属', food: '食料', power: '電力', components: '部品' };
   Game.logMessages = [];
   Game.carrySelection = 0;
-  Game.modalMode = null; // 'export' | 'import'
 
   // ---------- 数値フォーマット ----------
 
@@ -54,220 +53,255 @@
       .join('');
   }
 
-  // ---------- 各パネルの描画 ----------
+  // ---------- 描画の基本方針 ----------
+  // 各パネルのDOMは初回に一度だけ組み立て、以降は文字・disabled・hiddenだけを
+  // 書き換える。描画ループ(200ms毎)でボタンを作り直すと、指を置いてから
+  // 離すまでの間にボタンが差し替わりタップが成立しないため(特にスマホ)。
+  // クリック処理も各パネルのコンテナ1箇所でdata-*属性から判定する(イベント委譲)。
 
-  function renderResources() {
-    var list = document.getElementById('resource-list');
-    list.innerHTML = '';
+  function el(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  // 値が変わった時だけDOMに書き込む(無駄な再レイアウトを避ける)
+  function setText(node, text) {
+    text = String(text);
+    if (node.textContent !== text) node.textContent = text;
+  }
+  function setDisabled(node, disabled) {
+    if (node.disabled !== disabled) node.disabled = disabled;
+  }
+  function setHidden(node, hidden) {
+    if (node.hidden !== hidden) node.hidden = hidden;
+  }
+
+  var refs = null;
+
+  function buildUI() {
+    refs = { resources: {}, buildings: {}, assign: {}, upgrades: {}, achievements: {} };
+
+    // 資源
+    var resList = document.getElementById('resource-list');
+    resList.innerHTML = '';
     Game.RESOURCE_KEYS.forEach(function (key) {
-      var li = document.createElement('li');
-
-      var icon = document.createElement('span');
-      icon.className = 'pixel-icon icon-' + key;
-
-      var name = document.createElement('span');
-      name.textContent = Game.RESOURCE_NAMES[key];
-
-      var amount = document.createElement('span');
-      amount.className = 'amount';
-      amount.textContent = Game.formatNumber(Game.state.resources[key]);
-
-      var rate = document.createElement('span');
-      rate.className = 'rate';
-      var r = (Game.lastRates && Game.lastRates[key]) || 0;
-      rate.textContent = key === 'power' ? '(' + Game.formatNumber(r) + ')' : Game.formatRate(r);
-
-      li.appendChild(icon);
-      li.appendChild(name);
+      var li = el('li');
+      li.appendChild(el('span', 'pixel-icon icon-' + key));
+      li.appendChild(el('span', null, Game.RESOURCE_NAMES[key]));
+      var amount = el('span', 'amount');
+      var rate = el('span', 'rate');
       li.appendChild(amount);
       li.appendChild(rate);
-      list.appendChild(li);
+      resList.appendChild(li);
+      refs.resources[key] = { amount: amount, rate: rate };
+    });
+
+    // 建物(未解放の行は hidden にしておく)
+    var bList = document.getElementById('building-list');
+    bList.innerHTML = '';
+    Game.BUILDING_KEYS.forEach(function (key) {
+      var def = Game.BUILDING_DEFS[key];
+      var li = el('li', 'building-item');
+      li.appendChild(el('span', 'pixel-icon ' + def.icon));
+      var info = el('div');
+      var name = el('div', 'b-name');
+      var detail = el('div', 'b-detail');
+      info.appendChild(name);
+      info.appendChild(detail);
+      var btn = el('button', 'btn btn-small', '建設');
+      btn.dataset.action = 'build';
+      btn.dataset.key = key;
+      li.appendChild(info);
+      li.appendChild(btn);
+      bList.appendChild(li);
+      refs.buildings[key] = { row: li, name: name, detail: detail, btn: btn };
+    });
+
+    // 生存者の割り当て
+    var aList = document.getElementById('survivor-assign-list');
+    aList.innerHTML = '';
+    var unassignedRow = el('div', 'assign-row');
+    unassignedRow.appendChild(el('span', 'assign-name', '未割り当て'));
+    refs.unassigned = el('span');
+    unassignedRow.appendChild(refs.unassigned);
+    aList.appendChild(unassignedRow);
+    Game.BUILDING_KEYS.forEach(function (key) {
+      var row = el('div', 'assign-row');
+      row.appendChild(el('span', 'assign-name', Game.BUILDING_DEFS[key].name));
+      var minus = el('button', 'btn btn-tiny', '-');
+      minus.dataset.action = 'unassign';
+      minus.dataset.key = key;
+      minus.setAttribute('aria-label', Game.BUILDING_DEFS[key].name + 'から外す');
+      var count = el('span', 'assign-count');
+      var plus = el('button', 'btn btn-tiny', '+');
+      plus.dataset.action = 'assign';
+      plus.dataset.key = key;
+      plus.setAttribute('aria-label', Game.BUILDING_DEFS[key].name + 'に割り当てる');
+      row.appendChild(minus);
+      row.appendChild(count);
+      row.appendChild(plus);
+      aList.appendChild(row);
+      refs.assign[key] = { row: row, minus: minus, count: count, plus: plus };
+    });
+
+    // 永続強化
+    var uList = document.getElementById('prestige-upgrade-list');
+    uList.innerHTML = '';
+    Game.PRESTIGE_UPGRADE_KEYS.forEach(function (key) {
+      var li = el('li', 'upgrade-item');
+      var label = el('span');
+      var btn = el('button', 'btn btn-tiny btn-cost');
+      btn.dataset.action = 'upgrade';
+      btn.dataset.key = key;
+      li.appendChild(label);
+      li.appendChild(btn);
+      uList.appendChild(li);
+      refs.upgrades[key] = { label: label, btn: btn };
+    });
+
+    // 実績
+    var achList = document.getElementById('achievement-list');
+    achList.innerHTML = '';
+    Game.ACHIEVEMENT_DEFS.forEach(function (def) {
+      var li = el('li', 'achievement-item');
+      achList.appendChild(li);
+      refs.achievements[def.id] = li;
+    });
+  }
+
+  // ---------- 各パネルの更新 ----------
+
+  function renderResources() {
+    Game.RESOURCE_KEYS.forEach(function (key) {
+      var r = refs.resources[key];
+      var rate = (Game.lastRates && Game.lastRates[key]) || 0;
+      setText(r.amount, Game.formatNumber(Game.state.resources[key]));
+      setText(r.rate, key === 'power' ? '(余剰 ' + Game.formatNumber(rate) + ')' : Game.formatRate(rate));
     });
   }
 
   function renderClickArea() {
-    document.getElementById('click-amount').textContent = Game.formatNumber(Game.getClickAmount());
-    document.getElementById('click-level').textContent = Game.state.clickLevel;
+    setText(document.getElementById('click-amount'), Game.formatNumber(Game.getClickAmount()));
+    setText(document.getElementById('click-level'), Game.state.clickLevel);
     var cost = Game.getClickUpgradeCost();
-    document.getElementById('click-upgrade-cost').textContent = Game.formatNumber(cost);
-    document.getElementById('btn-upgrade-click').disabled = Game.state.resources.wood < cost;
+    setText(document.getElementById('click-upgrade-cost'), Game.formatNumber(cost));
+    setDisabled(document.getElementById('btn-upgrade-click'), Game.state.resources.wood < cost);
   }
 
   function renderBuildings() {
     var state = Game.state;
-    var list = document.getElementById('building-list');
-    list.innerHTML = '';
     Game.BUILDING_KEYS.forEach(function (key) {
       var def = Game.BUILDING_DEFS[key];
-      if (!def.unlocked(state)) return;
+      var r = refs.buildings[key];
+      var unlocked = def.unlocked(state);
+      setHidden(r.row, !unlocked);
+      if (!unlocked) return;
+
       var level = state.buildings[key];
       var cost = Game.getBuildingCost(key);
-      var affordable = Game.canAfford(cost);
-
-      var li = document.createElement('li');
-      li.className = 'building-item';
-
-      var icon = document.createElement('span');
-      icon.className = 'pixel-icon ' + def.icon;
-
-      var info = document.createElement('div');
-      var nameEl = document.createElement('div');
-      nameEl.className = 'b-name';
-      nameEl.textContent = def.name + ' Lv.' + level;
-
-      var detail = document.createElement('div');
-      detail.className = 'b-detail';
-      var outputParts = Object.keys(def.output).map(function (res) {
-        var perSec = def.output[res] * level * Game.getSurvivorBonus(state, key);
-        return '+' + Game.formatNumber(perSec) + Game.RESOURCE_NAMES[res] + '/s';
-      });
-      var consumeParts = Object.keys(def.consumes).map(function (res) {
-        var perSec = def.consumes[res] * level;
-        return '-' + Game.formatNumber(perSec) + Game.RESOURCE_NAMES[res] + '/s';
-      });
+      var bonus = Game.getSurvivorBonus(state, key);
+      var parts = [];
+      if (level > 0) {
+        Object.keys(def.output).forEach(function (res) {
+          parts.push('+' + Game.formatNumber(def.output[res] * level * bonus) + Game.RESOURCE_NAMES[res] + '/s');
+        });
+        Object.keys(def.consumes).forEach(function (res) {
+          parts.push('-' + Game.formatNumber(def.consumes[res] * level) + Game.RESOURCE_NAMES[res] + '/s');
+        });
+      } else {
+        parts.push('未建設');
+      }
       var costText = Object.keys(cost).map(function (res) {
         return Game.formatNumber(cost[res]) + Game.RESOURCE_NAMES[res];
       }).join(' + ');
-      var statusText = (level > 0 ? outputParts.concat(consumeParts).join(' ') : '未建設');
-      detail.textContent = statusText + ' / 次のコスト: ' + costText;
 
-      info.appendChild(nameEl);
-      info.appendChild(detail);
-
-      var buyBtn = document.createElement('button');
-      buyBtn.className = 'btn btn-small';
-      buyBtn.textContent = '建設';
-      buyBtn.disabled = !affordable;
-      buyBtn.addEventListener('click', function () { Game.buyBuilding(key); });
-
-      li.appendChild(icon);
-      li.appendChild(info);
-      li.appendChild(buyBtn);
-      list.appendChild(li);
+      setText(r.name, def.name + ' Lv.' + level);
+      setText(r.detail, parts.join(' ') + ' / 次: ' + costText);
+      setDisabled(r.btn, !Game.canAfford(cost));
     });
   }
 
   function renderSurvivors() {
     var state = Game.state;
     var cap = Game.getPopulationCap(state);
-    document.getElementById('survivor-count-text').textContent = state.survivors.total + ' / ' + cap;
-
+    setText(document.getElementById('survivor-count-text'), state.survivors.total + ' / ' + cap);
     var cost = Game.getSurvivorAcceptCost();
-    document.getElementById('survivor-cost').textContent = Game.formatNumber(cost);
-    document.getElementById('btn-accept-survivor').disabled = state.survivors.total >= cap || state.resources.wood < cost;
-
-    var assignList = document.getElementById('survivor-assign-list');
-    assignList.innerHTML = '';
+    setText(document.getElementById('survivor-cost'), Game.formatNumber(cost));
+    setDisabled(document.getElementById('btn-accept-survivor'), state.survivors.total >= cap || state.resources.wood < cost);
 
     var unassigned = Game.getUnassignedSurvivors(state);
-    var unassignedRow = document.createElement('div');
-    unassignedRow.className = 'assign-row';
-    unassignedRow.innerHTML = '<span class="assign-name">未割り当て</span><span>' + unassigned + '人</span>';
-    assignList.appendChild(unassignedRow);
-
+    setText(refs.unassigned, unassigned + '人');
     Game.BUILDING_KEYS.forEach(function (key) {
-      if (state.buildings[key] <= 0) return;
-      var def = Game.BUILDING_DEFS[key];
-
-      var row = document.createElement('div');
-      row.className = 'assign-row';
-
-      var name = document.createElement('span');
-      name.className = 'assign-name';
-      name.textContent = def.name;
-
-      var minus = document.createElement('button');
-      minus.className = 'btn btn-tiny';
-      minus.textContent = '-';
-      minus.disabled = (state.survivors.assigned[key] || 0) <= 0;
-      minus.addEventListener('click', function () { Game.unassignSurvivor(key); });
-
-      var count = document.createElement('span');
-      count.textContent = state.survivors.assigned[key] || 0;
-
-      var plus = document.createElement('button');
-      plus.className = 'btn btn-tiny';
-      plus.textContent = '+';
-      plus.disabled = unassigned <= 0;
-      plus.addEventListener('click', function () { Game.assignSurvivor(key); });
-
-      row.appendChild(name);
-      row.appendChild(minus);
-      row.appendChild(count);
-      row.appendChild(plus);
-      assignList.appendChild(row);
+      var r = refs.assign[key];
+      var assigned = state.survivors.assigned[key] || 0;
+      setHidden(r.row, state.buildings[key] <= 0);
+      setText(r.count, assigned);
+      setDisabled(r.minus, assigned <= 0);
+      setDisabled(r.plus, unassigned <= 0);
     });
   }
 
   function renderPrestige() {
     var state = Game.state;
     var req = Game.ESCAPE_REQUIREMENTS;
-
-    document.getElementById('prestige-requirements').textContent =
+    setText(document.getElementById('prestige-requirements'),
       '必要資源 — 部品: ' + Game.formatNumber(state.resources.components) + ' / ' + Game.formatNumber(req.components)
-      + ' ・ 金属: ' + Game.formatNumber(state.resources.metal) + ' / ' + Game.formatNumber(req.metal);
+      + ' ・ 金属: ' + Game.formatNumber(state.resources.metal) + ' / ' + Game.formatNumber(req.metal));
 
     var maxCarry = Math.min(Game.MAX_CARRY_SURVIVORS, state.survivors.total);
     if (Game.carrySelection > maxCarry) Game.carrySelection = maxCarry;
-    document.getElementById('carry-count').textContent = Game.carrySelection;
-    document.getElementById('carry-minus').disabled = Game.carrySelection <= 0;
-    document.getElementById('carry-plus').disabled = Game.carrySelection >= maxCarry;
+    setText(document.getElementById('carry-count'), Game.carrySelection);
+    setDisabled(document.getElementById('carry-minus'), Game.carrySelection <= 0);
+    setDisabled(document.getElementById('carry-plus'), Game.carrySelection >= maxCarry);
 
-    document.getElementById('knowledge-count').textContent = Game.formatNumber(state.prestige.knowledge);
-    document.getElementById('btn-prestige').disabled = !Game.canPrestige(state);
+    setText(document.getElementById('knowledge-count'), Game.formatNumber(state.prestige.knowledge));
+    var canJump = Game.canPrestige(state);
+    var jumpBtn = document.getElementById('btn-prestige');
+    setDisabled(jumpBtn, !canJump);
+    setText(jumpBtn, canJump
+      ? '脱出船を発進する(知識 +' + Game.calcKnowledgeGain(state) + ')'
+      : '脱出船を発進する');
 
-    var upgradeList = document.getElementById('prestige-upgrade-list');
-    upgradeList.innerHTML = '';
     Game.PRESTIGE_UPGRADE_KEYS.forEach(function (key) {
       var def = Game.PRESTIGE_UPGRADE_DEFS[key];
+      var r = refs.upgrades[key];
       var level = state.prestige.upgrades[key];
-
-      var li = document.createElement('li');
-      li.className = 'upgrade-item';
-
-      var label = document.createElement('span');
-      label.textContent = def.name + ' (Lv.' + level + (level >= def.max ? '/MAX' : '') + ')';
-
-      var btn = document.createElement('button');
-      btn.className = 'btn btn-tiny';
-      if (level >= def.max) {
-        btn.textContent = 'MAX';
-        btn.disabled = true;
+      var maxed = level >= def.max;
+      setText(r.label, def.name + ' (Lv.' + level + (maxed ? '/MAX' : '') + ')');
+      if (maxed) {
+        setText(r.btn, 'MAX');
+        setDisabled(r.btn, true);
       } else {
         var cost = Game.getPrestigeUpgradeCost(key);
-        btn.textContent = cost;
-        btn.disabled = state.prestige.knowledge < cost;
-        btn.addEventListener('click', function () { Game.buyPrestigeUpgrade(key); });
+        setText(r.btn, cost);
+        setDisabled(r.btn, state.prestige.knowledge < cost);
       }
-
-      li.appendChild(label);
-      li.appendChild(btn);
-      upgradeList.appendChild(li);
     });
   }
 
   function renderAchievements() {
-    var list = document.getElementById('achievement-list');
-    list.innerHTML = '';
     Game.ACHIEVEMENT_DEFS.forEach(function (def) {
       var unlocked = !!Game.state.achievements[def.id];
-      var li = document.createElement('li');
-      li.className = 'achievement-item' + (unlocked ? ' unlocked' : '');
-      li.textContent = (unlocked ? '[済] ' : '[  ] ') + def.name + ' — ' + def.desc;
-      list.appendChild(li);
+      var li = refs.achievements[def.id];
+      var cls = 'achievement-item' + (unlocked ? ' unlocked' : '');
+      if (li.className !== cls) li.className = cls;
+      setText(li, (unlocked ? '[済] ' : '[  ] ') + def.name + ' — ' + def.desc);
     });
   }
 
   function renderHeader() {
-    document.getElementById('planet-count').textContent = '第' + (Game.state.prestige.count + 1) + '惑星';
+    setText(document.getElementById('planet-count'), '第' + (Game.state.prestige.count + 1) + '惑星');
   }
 
   function renderSaveStatus(text) {
-    document.getElementById('save-status').textContent = text || '';
+    setText(document.getElementById('save-status'), text || '');
   }
   Game.renderSaveStatus = renderSaveStatus;
 
   Game.render = function () {
+    if (!refs) buildUI();
     renderHeader();
     renderResources();
     renderClickArea();
@@ -277,59 +311,103 @@
     renderAchievements();
   };
 
-  // ---------- モーダル ----------
+  // ---------- モーダル(セーブコード入出力 / 確認ダイアログ) ----------
+  // window.confirm / alert はサンドボックス環境(アーティファクト等)で
+  // ブロックされることがあるため使わず、ページ内のモーダルで代替する。
 
-  function openModal(mode) {
-    Game.modalMode = mode;
-    var overlay = document.getElementById('modal-overlay');
-    var title = document.getElementById('modal-title');
+  var modal = { mode: null, onConfirm: null };
+
+  function openModal(options) {
+    modal.mode = options.mode;
+    modal.onConfirm = options.onConfirm || null;
     var textarea = document.getElementById('modal-textarea');
     var note = document.getElementById('modal-note');
+    setText(document.getElementById('modal-title'), options.title);
+    setText(note, options.note || '');
+    note.classList.remove('is-error');
+    setText(document.getElementById('modal-confirm'), options.confirmLabel || 'OK');
+    setText(document.getElementById('modal-cancel'), options.cancelLabel || '閉じる');
+    document.getElementById('modal-confirm').classList.toggle('btn-danger', !!options.danger);
 
-    if (mode === 'export') {
-      title.textContent = 'セーブコード(コピーして保存してください)';
-      textarea.value = Game.encodeSaveCode(Game.state);
-      textarea.readOnly = true;
-      note.textContent = '※ 実績・統計はこのコードに含まれません(端末ごとのLocalStorageに保存されます)。';
-      textarea.select();
+    textarea.hidden = options.textarea === undefined;
+    textarea.readOnly = !!options.readOnly;
+    textarea.value = options.textarea || '';
+    document.getElementById('modal-overlay').hidden = false;
+    if (!textarea.hidden) {
+      textarea.focus();
+      if (options.readOnly) textarea.select();
     } else {
-      title.textContent = 'セーブコードを読み込む';
-      textarea.value = '';
-      textarea.readOnly = false;
-      note.textContent = '別端末で発行したコードを貼り付けてください。現在の進行状況は上書きされます。';
+      document.getElementById('modal-confirm').focus();
     }
-    overlay.hidden = false;
   }
 
   function closeModal() {
     document.getElementById('modal-overlay').hidden = true;
-    Game.modalMode = null;
+    modal.mode = null;
+    modal.onConfirm = null;
   }
 
-  function handleModalConfirm() {
-    if (Game.modalMode === 'import') {
-      var code = document.getElementById('modal-textarea').value;
-      try {
-        var imported = Game.decodeSaveCode(code);
-        // 実績・統計はこの端末のものを維持する(ハイブリッド仕様)
-        imported.achievements = Object.assign({}, Game.state.achievements);
-        imported.stats = Object.assign({}, Game.state.stats);
-        Game.state = imported;
-        var offlineSec = Game.applyOfflineProgress(Game.state);
-        Game.saveToLocalStorage();
-        Game.render();
-        Game.addLog('セーブコードを読み込みました' + (offlineSec > 0 ? '(放置分 ' + Math.floor(offlineSec / 60) + '分 を反映)' : ''));
-      } catch (e) {
-        window.alert('読み込みに失敗しました: ' + e.message);
-        return;
-      }
+  function showModalError(message) {
+    var note = document.getElementById('modal-note');
+    setText(note, message);
+    note.classList.add('is-error');
+  }
+
+  function confirmAction(options) {
+    openModal({
+      mode: 'confirm',
+      title: options.title,
+      note: options.message,
+      confirmLabel: options.confirmLabel,
+      cancelLabel: 'やめる',
+      danger: options.danger,
+      onConfirm: function () {
+        options.onConfirm();
+        closeModal();
+      },
+    });
+  }
+
+  function importSaveCode(code) {
+    var imported;
+    try {
+      imported = Game.decodeSaveCode(code);
+    } catch (e) {
+      showModalError('読み込めませんでした: ' + e.message + '。コードを最後まで貼り付けたか確認してください。');
+      return;
     }
+    // 実績・統計はこの端末のものを維持する(ハイブリッド仕様)
+    imported.achievements = Object.assign({}, Game.state.achievements);
+    imported.stats = Object.assign({}, Game.state.stats);
+    Game.state = imported;
+    Game.carrySelection = 0;
+    var offlineSec = Game.applyOfflineProgress(Game.state);
+    Game.saveToLocalStorage();
+    Game.render();
+    Game.addLog('セーブコードを読み込みました' + (offlineSec > 0 ? '(放置分 ' + Math.floor(offlineSec / 60) + '分 を反映)' : ''));
     closeModal();
   }
 
   // ---------- イベントバインド ----------
 
+  function handleDelegatedClick(e) {
+    var btn = e.target.closest('button[data-action]');
+    if (!btn || btn.disabled) return;
+    var key = btn.dataset.key;
+    switch (btn.dataset.action) {
+      case 'build': Game.buyBuilding(key); break;
+      case 'assign': Game.assignSurvivor(key); break;
+      case 'unassign': Game.unassignSurvivor(key); break;
+      case 'upgrade': Game.buyPrestigeUpgrade(key); break;
+    }
+  }
+
   Game.initUI = function () {
+    buildUI();
+    ['building-list', 'survivor-assign-list', 'prestige-upgrade-list'].forEach(function (id) {
+      document.getElementById(id).addEventListener('click', handleDelegatedClick);
+    });
+
     document.getElementById('btn-click').addEventListener('click', function () { Game.doManualClick(); });
     document.getElementById('btn-upgrade-click').addEventListener('click', function () { Game.buyClickUpgrade(); });
     document.getElementById('btn-accept-survivor').addEventListener('click', function () { Game.acceptSurvivor(); });
@@ -346,26 +424,78 @@
 
     document.getElementById('btn-prestige').addEventListener('click', function () {
       if (!Game.canPrestige(Game.state)) return;
-      var ok = window.confirm('脱出船を発進します。現在の建物・資源は失われますが、知識ポイントと同行させた生存者' + Game.carrySelection + '人は引き継がれます。よろしいですか?');
-      if (!ok) return;
-      Game.doPrestige(Game.carrySelection);
-      Game.carrySelection = 0;
-      Game.saveToLocalStorage();
+      var carry = Game.carrySelection;
+      confirmAction({
+        title: '脱出船を発進しますか?',
+        message: 'この惑星の建物と資源はすべて失われます。知識ポイント +' + Game.calcKnowledgeGain(Game.state)
+          + ' と、同行させる生存者 ' + carry + '人 は次の惑星へ引き継がれます。',
+        confirmLabel: '発進する',
+        onConfirm: function () {
+          Game.doPrestige(carry);
+          Game.carrySelection = 0;
+          Game.saveToLocalStorage();
+        },
+      });
     });
 
-    document.getElementById('btn-export').addEventListener('click', function () { openModal('export'); });
-    document.getElementById('btn-import').addEventListener('click', function () { openModal('import'); });
-    document.getElementById('modal-confirm').addEventListener('click', handleModalConfirm);
+    document.getElementById('btn-export').addEventListener('click', function () {
+      openModal({
+        mode: 'export',
+        title: 'セーブコード',
+        textarea: Game.encodeSaveCode(Game.state),
+        readOnly: true,
+        note: 'このコードを控えておけば、別の端末で「コードを読み込む」から続きを遊べます。実績・統計はコードに含まれず、端末ごとに記録されます。',
+        confirmLabel: 'コピーして閉じる',
+        onConfirm: function () {
+          var text = document.getElementById('modal-textarea').value;
+          var done = function () { Game.addLog('セーブコードをコピーしました'); closeModal(); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () {
+              showModalError('自動コピーできませんでした。上のコードを長押し(または選択)してコピーしてください。');
+            });
+          } else {
+            showModalError('自動コピーに対応していない環境です。上のコードを選択してコピーしてください。');
+          }
+        },
+      });
+    });
+
+    document.getElementById('btn-import').addEventListener('click', function () {
+      openModal({
+        mode: 'import',
+        title: 'セーブコードを読み込む',
+        textarea: '',
+        note: '別の端末で発行したコードを貼り付けてください。今の進行状況は上書きされます。',
+        confirmLabel: '読み込む',
+        onConfirm: function () { importSaveCode(document.getElementById('modal-textarea').value); },
+      });
+    });
+
+    document.getElementById('modal-confirm').addEventListener('click', function () {
+      if (modal.onConfirm) modal.onConfirm(); else closeModal();
+    });
     document.getElementById('modal-cancel').addEventListener('click', closeModal);
+    document.getElementById('modal-overlay').addEventListener('click', function (e) {
+      if (e.target.id === 'modal-overlay') closeModal();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && modal.mode) closeModal();
+    });
 
     document.getElementById('btn-reset').addEventListener('click', function () {
-      var ok = window.confirm('本当に最初からやり直しますか?この操作は取り消せません。');
-      if (!ok) return;
-      Game.state = Game.createInitialState();
-      Game.carrySelection = 0;
-      Game.saveToLocalStorage();
-      Game.render();
-      Game.addLog('コロニーの記録を消去し、最初からやり直します。');
+      confirmAction({
+        title: '最初からやり直しますか?',
+        message: '惑星ジャンプの回数・知識ポイント・実績を含め、この端末の記録がすべて消えます。元には戻せません。',
+        confirmLabel: '消去してやり直す',
+        danger: true,
+        onConfirm: function () {
+          Game.state = Game.createInitialState();
+          Game.carrySelection = 0;
+          Game.saveToLocalStorage();
+          Game.render();
+          Game.addLog('コロニーの記録を消去し、最初からやり直します。');
+        },
+      });
     });
   };
 })(window.Game = window.Game || {});

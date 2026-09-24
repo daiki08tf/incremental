@@ -36,7 +36,7 @@
     state.resources = {
       wood: 100 * state.prestige.upgrades.startingWood,
       metal: 0,
-      food: 0,
+      food: Game.STARTING_FOOD,
       power: 0,
       components: 0,
     };

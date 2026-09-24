@@ -91,6 +91,10 @@
       throw new Error('コードを読み取れませんでした');
     }
 
+    var expected = Game.RESOURCE_KEYS.length + Game.BUILDING_KEYS.length * 2 + 1 + 3
+      + Game.PRESTIGE_UPGRADE_KEYS.length + 1;
+    if (nums.length !== expected) throw new Error('コードの項目数が合いません(別バージョンのコードの可能性があります)');
+
     var state = Game.createInitialState();
     var i = 0;
     Game.RESOURCE_KEYS.forEach(function (k) { state.resources[k] = nums[i++] / 100; });
@@ -102,6 +106,11 @@
     state.prestige.knowledge = nums[i++] / 100;
     Game.PRESTIGE_UPGRADE_KEYS.forEach(function (k) { state.prestige.upgrades[k] = nums[i++]; });
     state.lastActiveTime = nums[i++] * 1000;
+
+    // 割り当て人数の合計が総数を超えていたら、割り当てをリセットして整合させる
+    if (Game.getUnassignedSurvivors(state) < 0) {
+      Game.BUILDING_KEYS.forEach(function (k) { state.survivors.assigned[k] = 0; });
+    }
     return state;
   };
 
@@ -113,9 +122,17 @@
     if (elapsedSeconds < 5) return 0; // 誤差レベルは無視
     var cappedSeconds = Math.min(elapsedSeconds, Game.OFFLINE_MAX_SECONDS);
 
+    // 1回の巨大なtickだと「途中で金属や食料が尽きる」状況を再現できないため、
+    // 30秒刻みで分割してシミュレーションする(8時間でも960回程度で軽い)
+    var STEP = 30;
     var prevState = Game.state;
     Game.state = state;
-    Game.tick(cappedSeconds, { offline: true });
+    var remaining = cappedSeconds;
+    while (remaining > 0) {
+      var dt = Math.min(STEP, remaining);
+      Game.tick(dt, { offline: true });
+      remaining -= dt;
+    }
     Game.state = prevState;
 
     return cappedSeconds;

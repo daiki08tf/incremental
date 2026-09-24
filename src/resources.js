@@ -59,26 +59,49 @@
       raw[key] = { produce: produce, consume: consume };
     });
 
-    // 2. 電力の需給を計算し、電力を使う建物の稼働率を決める
+    // 2. 各建物の稼働率を決める
+    //   (a) 木材・金属などの「在庫資源」を消費する建物は、在庫+このtickの生産量で
+    //       賄える分しか動けない(足りなければ消費者全体で按分)
+    //   (b) 電力は貯蔵しないため、発電量(発電機の稼働率込み)と需要で按分
+    var ratio = {};
+    Game.BUILDING_KEYS.forEach(function (key) { ratio[key] = 1; });
+
+    Game.RESOURCE_KEYS.forEach(function (res) {
+      if (res === 'power') return;
+      var demand = 0;
+      var produced = 0;
+      Game.BUILDING_KEYS.forEach(function (key) {
+        demand += raw[key].consume[res] || 0;
+        produced += raw[key].produce[res] || 0;
+      });
+      if (demand <= 0) return;
+      var available = state.resources[res] + produced * dtSeconds;
+      var resRatio = Math.max(0, Math.min(1, available / (demand * dtSeconds)));
+      Game.BUILDING_KEYS.forEach(function (key) {
+        if (raw[key].consume[res]) ratio[key] = Math.min(ratio[key], resRatio);
+      });
+    });
+
     var powerSupply = 0;
     var powerDemand = 0;
     Game.BUILDING_KEYS.forEach(function (key) {
-      powerSupply += raw[key].produce.power || 0;
-      powerDemand += raw[key].consume.power || 0;
+      powerSupply += (raw[key].produce.power || 0) * ratio[key];
+      powerDemand += (raw[key].consume.power || 0) * ratio[key];
     });
     var powerRatio = powerDemand > 0 ? Math.min(1, powerSupply / powerDemand) : 1;
+    Game.BUILDING_KEYS.forEach(function (key) {
+      if (raw[key].consume.power) ratio[key] *= powerRatio;
+    });
 
     Game.BUILDING_KEYS.forEach(function (key) {
-      var def = Game.BUILDING_DEFS[key];
-      var usesPower = def.consumes && def.consumes.power;
-      if (!usesPower) return;
       Object.keys(raw[key].produce).forEach(function (res) {
-        raw[key].produce[res] *= powerRatio;
+        raw[key].produce[res] *= ratio[key];
       });
       Object.keys(raw[key].consume).forEach(function (res) {
-        raw[key].consume[res] *= powerRatio;
+        raw[key].consume[res] *= ratio[key];
       });
     });
+    var powerUsed = powerDemand * powerRatio;
 
     // 3. 資源へ反映
     var delta = { wood: 0, metal: 0, food: 0, power: 0, components: 0 };
@@ -100,7 +123,7 @@
     Game.RESOURCE_KEYS.forEach(function (res) {
       if (res === 'power') {
         // 電力は貯蔵しない瞬間流量として表示用に上書き(需給差の目安)
-        state.resources.power = powerSupply * powerRatio - powerDemand * powerRatio;
+        state.resources.power = powerSupply - powerUsed;
         rates.power = state.resources.power;
         return;
       }

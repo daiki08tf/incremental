@@ -27,7 +27,7 @@
     farm: {
       name: '農場',
       icon: 'icon-food',
-      baseCost: { wood: 90, metal: 15 },
+      baseCost: { wood: 40 },
       costGrowth: 1.14,
       output: { food: 0.5 },
       consumes: {},
@@ -60,7 +60,7 @@
     var level = state.buildings[key];
     var cost = {};
     Object.keys(def.baseCost).forEach(function (res) {
-      cost[res] = def.baseCost[res] * Math.pow(def.costGrowth, level);
+      cost[res] = Math.ceil(def.baseCost[res] * Math.pow(def.costGrowth, level));
     });
     return cost;
   };
