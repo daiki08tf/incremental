@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "description": "Curated authority map for Incremental (漂流コロニー), verified against the real code and tests. The map only POINTS at authorities — it is not one. `kinds`: code = canonical implementation, spec = design authority (GDD), test = regression enforcement. ./dev authority --check verifies every listed path exists.",
+  "authorities": [
+    {
+      "id": "state-shape",
+      "title": "Save state schema + tuning constants",
+      "authority": ["src/state.js"],
+      "kind": "code",
+      "persisted": "entire createInitialState() shape (localStorage 'ashfall_save_v1')",
+      "mutation": ["src/state.js (createInitialState)", "src/save.js (normalizeState fill)"],
+      "validation": "tests/regression.test.js (normalizeState legacy-save test); ./dev save-check",
+      "notes": "SAVE_KEY, RESOURCE_KEYS, BUILDING_KEYS, PRESTIGE_UPGRADE_KEYS, FOOD_PER_SURVIVOR, STARTING_FOOD, BASE_POPULATION_CAP, MAX_CARRY_SURVIVORS, OFFLINE_* all live here. New top-level state keys MUST be added here AND handled by normalizeState — the codec field count is derived from these lists."
+    },
+    {
+      "id": "buildings",
+      "title": "Building defs / milestones / unlock conditions / costs",
+      "authority": ["src/buildings.js"],
+      "kind": "code",
+      "persisted": "state.buildings[key] counts",
+      "mutation": ["src/buildings.js"],
+      "validation": "tests/regression.test.js (milestone matrix, unlock chain, no-literal-duplication in ui.js)",
+      "notes": "BUILDING_DEFS is the single source of truth. Milestone multipliers 1.15/1.33/1.60 are CALIBRATED (comment: first jump 27-30min, components-500 gap <=8min) — do not retune casually. The regression test asserts the literals never appear in src/ui.js — never inline them."
+    },
+    {
+      "id": "simulation",
+      "title": "tick() production/consumption/power/food engine",
+      "authority": ["src/resources.js"],
+      "kind": "code",
+      "persisted": "state.resources + stats (incremental writes only)",
+      "mutation": ["src/resources.js (Game.tick, click economy)"],
+      "validation": "tests/regression.test.js (milestone production, consumption exemption, power supply/demand)",
+      "notes": "Power is an instantaneous flow, not a stored resource — supply<demand proportionally throttles consumers. Milestone multiplies OUTPUT only, never consumption. Food penalty is a binary threshold (<=0 → ×0.5), not graduated. getBuildingOutputMultiplier is the shared authority — call it, don't reimplement."
+    },
+    {
+      "id": "survivors",
+      "title": "Survivor population + assignment",
+      "authority": ["src/survivors.js"],
+      "kind": "code",
+      "persisted": "state.survivors.total + assigned",
+      "mutation": ["src/survivors.js"],
+      "validation": "tests/regression.test.js (via farm unlock + decode invariant); ./dev save-check (assigned>total reset)",
+      "notes": "Pop cap = BASE_POPULATION_CAP + prestige.upgrades.populationCap (state.js constants). decodeSaveCode resets assignments if assigned total exceeds total — preserve that invariant."
+    },
+    {
+      "id": "prestige",
+      "title": "Escape requirements / planet jump reset / knowledge economy",
+      "authority": ["src/prestige.js"],
+      "kind": "code",
+      "persisted": "state.prestige.{count,knowledge,upgrades}",
+      "mutation": ["src/prestige.js"],
+      "validation": "tests/regression.test.js (bottleneck progress ratio, reset to ×1 multipliers, no literal dup in ui.js)",
+      "notes": "ESCAPE_REQUIREMENTS {components:500, metal:800} is the only source — the test forbids the literals in ui.js. Progress display = min(bottleneck ratio). KP = floor(sqrt((components*2+metal)/40)). Carry limit MAX_CARRY_SURVIVORS=3 lives in state.js."
+    },
+    {
+      "id": "achievements",
+      "title": "Achievement definitions + unlock checks",
+      "authority": ["src/achievements.js"],
+      "kind": "code",
+      "persisted": "state.achievements (unlocked flags)",
+      "mutation": ["src/achievements.js"],
+      "validation": "tests/regression.test.js (checkAchievements stubbed; DOM test asserts log path)",
+      "notes": "Achievements + stats are localStorage-only — deliberately EXCLUDED from the save code (GDD §7/§9 hybrid spec). Do not add them to the codec."
+    },
+    {
+      "id": "save-format",
+      "title": "Save persistence — localStorage, normalizeState, save-code codec, offline progress",
+      "authority": ["src/save.js", "src/state.js"],
+      "kind": "code",
+      "persisted": "localStorage 'ashfall_save_v1' (full) + portable save-code (subset)",
+      "mutation": ["src/save.js (encode/decode/normalize/offline)", "src/state.js (SAVE_KEY, OFFLINE_* caps)"],
+      "validation": "tests/regression.test.js (normalizeState legacy test); ./dev save-check (codec roundtrip, checksum, version gate, offline caps)",
+      "notes": "normalizeState shallow-merges each section over createInitialState — older saves gain new keys for free. Save-code field count IS the version gate (decodeSaveCode rejects wrong counts). checksum = last '_' + 4 base36 chars. Offline: <5s ignored, capped at OFFLINE_MAX_SECONDS=8h, 30s steps at OFFLINE_EFFICIENCY=0.5."
+    },
+    {
+      "id": "goal",
+      "title": "Next-goal guidance logic (priority semantics)",
+      "authority": ["src/ui.js"],
+      "kind": "code",
+      "persisted": "never (derived)",
+      "mutation": ["src/ui.js (Game.getNextGoal)"],
+      "validation": "tests/regression.test.js (unlock>all, jump-KP when able, milestone-vs-escape ratio comparison)",
+      "notes": "QUIRK: goal logic lives in src/ui.js despite being game logic — goal kinds {unlock,milestone,escape,jump} and their priority order are regression-tested. If it moves files, keep the semantics."
+    },
+    {
+      "id": "render",
+      "title": "DOM rendering + element IDs",
+      "authority": ["src/ui.js", "index.html"],
+      "kind": "code",
+      "persisted": "never",
+      "mutation": ["src/ui.js (initUI/render)"],
+      "validation": "tests/regression.test.js (DOM stub render smoke; artifact ID-set equality)",
+      "notes": "index.html element ids are the contract — the artifact sync test compares the id sets of index.html and artifact/game.html. Renaming an id requires touching both."
+    },
+    {
+      "id": "loop",
+      "title": "Boot + game loop + autosave cadence",
+      "authority": ["src/main.js", "src/state.js"],
+      "kind": "code",
+      "persisted": "autosave writes state (via save.js)",
+      "mutation": ["src/main.js"],
+      "validation": "tests/regression.test.js (boot on DOM stub)",
+      "notes": "TICK_INTERVAL_MS=200 doubles as the render interval BY DESIGN (comment: full-DOM rebuild every frame caused lost clicks). dt clamp <5s guards background-tab jumps. AUTOSAVE_INTERVAL_MS=10s in state.js."
+    },
+    {
+      "id": "artifact",
+      "title": "Self-contained artifact bundle",
+      "authority": ["scripts/build-artifact.sh", "index.html"],
+      "kind": "code",
+      "persisted": "n/a (generated file)",
+      "mutation": ["scripts/build-artifact.sh (regenerate after ANY game change)"],
+      "validation": "tests/regression.test.js (CSS/JS/id-set byte-level sync)",
+      "notes": "artifact/game.html is GENERATED — never edit directly. index.html <script src> order is the load-order authority the builder consumes. The sync test compares normalized CSS+JS+ids."
+    },
+    {
+      "id": "script-order",
+      "title": "Module load order",
+      "authority": ["index.html"],
+      "kind": "code",
+      "persisted": "n/a",
+      "mutation": ["index.html <script src> tags"],
+      "validation": "tests/regression.test.js (ARTIFACT_ORDER joins the same files; sync test)",
+      "notes": "tests/regression.test.js keeps a PARALLEL copy (SCRIPT_ORDER/ARTIFACT_ORDER) — divergence surfaces via the artifact-sync test but a mismatch in load-order could break the vm harness first. When adding a src file: index.html + SCRIPT_ORDER + artifact regen."
+    },
+    {
+      "id": "balance",
+      "title": "Pacing calibration",
+      "authority": ["src/buildings.js", "docs/GDD.md"],
+      "kind": "spec",
+      "persisted": "n/a",
+      "mutation": ["src/buildings.js (milestone literals)", "src/prestige.js (requirements, KP curve)", "src/survivors.js (accept cost)"],
+      "validation": "manual play measurement (comment cites measured 27'47\" first jump)",
+      "notes": "GDD §2/§4/§6 is spec authority; the buildings.js comment records real-measured calibration targets. Changing growths/requirements is a balance change — out of scope for infra work."
+    },
+    {
+      "id": "gdd",
+      "title": "Design spec",
+      "authority": ["docs/GDD.md"],
+      "kind": "spec",
+      "persisted": "n/a",
+      "mutation": ["docs/GDD.md"],
+      "validation": "code must conform; where code diverges the file comment + tests are the truth",
+      "notes": "GDD documents intent incl. MVP simplifications (power flow, binary food penalty). Where spec and code disagree, check file comments — several simplifications are deliberate."
+    }
+  ]
+}

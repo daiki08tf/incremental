@@ -1,0 +1,776 @@
+{
+  "meta": {
+    "schemaVersion": 1,
+    "generator": "scripts/dev/map.js",
+    "git": {
+      "branch": "main",
+      "head": "d4c17c3",
+      "remote": "https://github.com/daiki08tf/incremental.git"
+    },
+    "fileCounts": {
+      "total": 34,
+      "code": 25,
+      "tests": 2
+    }
+  },
+  "systems": [
+    {
+      "id": "state",
+      "title": "Game state schema + tuning constants + key lists",
+      "concepts": [
+        "state",
+        "schema",
+        "constants",
+        "save-key",
+        "keys"
+      ],
+      "files": [
+        "src/state.js"
+      ],
+      "tests": [
+        "tests/dev-infra.test.js",
+        "tests/regression.test.js"
+      ],
+      "docs": [
+        "docs/GDD.md"
+      ],
+      "dependsOn": [],
+      "dependents": [
+        "achievements",
+        "persistence",
+        "prestige",
+        "runtime",
+        "simulation",
+        "survivors",
+        "ui"
+      ]
+    },
+    {
+      "id": "buildings",
+      "title": "BUILDING_DEFS — defs, milestones, unlock conditions, costs",
+      "concepts": [
+        "building",
+        "milestone",
+        "unlock",
+        "cost",
+        "balance"
+      ],
+      "files": [
+        "src/buildings.js"
+      ],
+      "tests": [
+        "tests/dev-infra.test.js",
+        "tests/regression.test.js"
+      ],
+      "docs": [
+        "docs/GDD.md"
+      ],
+      "dependsOn": [
+        "achievements",
+        "ui"
+      ],
+      "dependents": [
+        "simulation",
+        "ui"
+      ]
+    },
+    {
+      "id": "simulation",
+      "title": "tick engine — production/consumption/power/food/click",
+      "concepts": [
+        "tick",
+        "production",
+        "power",
+        "food",
+        "click",
+        "economy"
+      ],
+      "files": [
+        "src/resources.js"
+      ],
+      "tests": [
+        "tests/dev-infra.test.js",
+        "tests/regression.test.js"
+      ],
+      "docs": [
+        "docs/GDD.md"
+      ],
+      "dependsOn": [
+        "achievements",
+        "buildings",
+        "state",
+        "ui"
+      ],
+      "dependents": [
+        "persistence",
+        "runtime",
+        "ui"
+      ]
+    },
+    {
+      "id": "survivors",
+      "title": "Survivor intake + building assignment",
+      "concepts": [
+        "survivor",
+        "population",
+        "assignment"
+      ],
+      "files": [
+        "src/survivors.js"
+      ],
+      "tests": [
+        "tests/dev-infra.test.js",
+        "tests/regression.test.js"
+      ],
+      "docs": [
+        "docs/GDD.md"
+      ],
+      "dependsOn": [
+        "achievements",
+        "state",
+        "ui"
+      ],
+      "dependents": [
+        "persistence",
+        "ui"
+      ]
+    },
+    {
+      "id": "prestige",
+      "title": "Planet jump / escape requirements / knowledge upgrades",
+      "concepts": [
+        "prestige",
+        "escape",
+        "jump",
+        "knowledge",
+        "upgrade"
+      ],
+      "files": [
+        "src/prestige.js"
+      ],
+      "tests": [
+        "tests/regression.test.js"
+      ],
+      "docs": [
+        "docs/GDD.md"
+      ],
+      "dependsOn": [
+        "achievements",
+        "state",
+        "ui"
+      ],
+      "dependents": [
+        "ui"
+      ]
+    },
+    {
+      "id": "achievements",
+      "title": "ACHIEVEMENT_DEFS + unlock checks",
+      "concepts": [
+        "achievement",
+        "unlock"
+      ],
+      "files": [
+        "src/achievements.js"
+      ],
+      "tests": [
+        "tests/regression.test.js"
+      ],
+      "docs": [
+        "docs/GDD.md"
+      ],
+      "dependsOn": [
+        "state",
+        "ui"
+      ],
+      "dependents": [
+        "buildings",
+        "prestige",
+        "runtime",
+        "simulation",
+        "survivors",
+        "ui"
+      ]
+    },
+    {
+      "id": "persistence",
+      "title": "localStorage save + normalizeState + save-code codec + offline progress",
+      "concepts": [
+        "save",
+        "savecode",
+        "offline",
+        "migration",
+        "normalize"
+      ],
+      "files": [
+        "src/save.js"
+      ],
+      "tests": [
+        "tests/dev-infra.test.js",
+        "tests/regression.test.js"
+      ],
+      "docs": [
+        "docs/GDD.md"
+      ],
+      "dependsOn": [
+        "simulation",
+        "state",
+        "survivors"
+      ],
+      "dependents": [
+        "runtime",
+        "ui"
+      ]
+    },
+    {
+      "id": "ui",
+      "title": "Rendering + getNextGoal + logs (DOM layer)",
+      "concepts": [
+        "ui",
+        "render",
+        "goal",
+        "log"
+      ],
+      "files": [
+        "src/ui.js"
+      ],
+      "tests": [
+        "tests/regression.test.js"
+      ],
+      "docs": [
+        "docs/GDD.md"
+      ],
+      "dependsOn": [
+        "achievements",
+        "buildings",
+        "persistence",
+        "prestige",
+        "simulation",
+        "state",
+        "survivors"
+      ],
+      "dependents": [
+        "achievements",
+        "buildings",
+        "prestige",
+        "runtime",
+        "simulation",
+        "survivors"
+      ]
+    },
+    {
+      "id": "runtime",
+      "title": "boot + 200ms game loop + autosave",
+      "concepts": [
+        "boot",
+        "loop",
+        "autosave"
+      ],
+      "files": [
+        "src/main.js"
+      ],
+      "tests": [
+        "tests/regression.test.js"
+      ],
+      "docs": [],
+      "dependsOn": [
+        "achievements",
+        "persistence",
+        "simulation",
+        "state",
+        "ui"
+      ],
+      "dependents": []
+    },
+    {
+      "id": "shell",
+      "title": "index.html + style.css + generated artifact bundle",
+      "concepts": [
+        "html",
+        "css",
+        "artifact",
+        "bundle",
+        "script-order"
+      ],
+      "files": [
+        "artifact/game.html",
+        "index.html",
+        "scripts/build-artifact.sh",
+        "style.css"
+      ],
+      "tests": [
+        "tests/dev-infra.test.js",
+        "tests/regression.test.js"
+      ],
+      "docs": [],
+      "dependsOn": [],
+      "dependents": []
+    },
+    {
+      "id": "tests",
+      "title": "Regression suite",
+      "concepts": [
+        "tests",
+        "regression"
+      ],
+      "files": [
+        "tests/dev-infra.test.js",
+        "tests/regression.test.js"
+      ],
+      "tests": [
+        "tests/dev-infra.test.js",
+        "tests/regression.test.js"
+      ],
+      "docs": [],
+      "dependsOn": [],
+      "dependents": []
+    },
+    {
+      "id": "docs",
+      "title": "GDD + project docs",
+      "concepts": [
+        "docs",
+        "gdd",
+        "spec"
+      ],
+      "files": [
+        "DEV_INFRA.md",
+        "GENERICIZATION_EVIDENCE.md",
+        "README.md",
+        "docs/GDD.md"
+      ],
+      "tests": [
+        "tests/dev-infra.test.js"
+      ],
+      "docs": [],
+      "dependsOn": [],
+      "dependents": []
+    },
+    {
+      "id": "devtools",
+      "title": "Dev infrastructure",
+      "concepts": [
+        "tooling",
+        "dev",
+        "infra"
+      ],
+      "files": [
+        "dev",
+        "scripts/dev/authority.js",
+        "scripts/dev/check.js",
+        "scripts/dev/cli.js",
+        "scripts/dev/context.js",
+        "scripts/dev/doctor.js",
+        "scripts/dev/handoff.js",
+        "scripts/dev/impact.js",
+        "scripts/dev/lib/gameLoad.js",
+        "scripts/dev/lib/repo.js",
+        "scripts/dev/map.js",
+        "scripts/dev/saveCheck.js",
+        "scripts/dev/scope.js",
+        "scripts/dev/smoke.js",
+        "scripts/dev/status.js"
+      ],
+      "tests": [
+        "tests/dev-infra.test.js"
+      ],
+      "docs": [
+        "DEV_INFRA.md"
+      ],
+      "dependsOn": [],
+      "dependents": []
+    }
+  ],
+  "authorities": [
+    {
+      "id": "state-shape",
+      "title": "Save state schema + tuning constants",
+      "kind": "code",
+      "authority": [
+        "src/state.js"
+      ],
+      "persisted": "entire createInitialState() shape (localStorage 'ashfall_save_v1')",
+      "mutation": [
+        "src/state.js (createInitialState)",
+        "src/save.js (normalizeState fill)"
+      ],
+      "validation": "tests/regression.test.js (normalizeState legacy-save test); ./dev save-check",
+      "notes": "SAVE_KEY, RESOURCE_KEYS, BUILDING_KEYS, PRESTIGE_UPGRADE_KEYS, FOOD_PER_SURVIVOR, STARTING_FOOD, BASE_POPULATION_CAP, MAX_CARRY_SURVIVORS, OFFLINE_* all live here. New top-level state keys MUST be added here AND handled by normalizeState — the codec field count is derived from these lists.",
+      "resolvedFiles": [
+        "src/state.js"
+      ],
+      "missingPaths": [],
+      "systemsTouched": [
+        "state"
+      ],
+      "relatedTests": [
+        "tests/dev-infra.test.js",
+        "tests/regression.test.js"
+      ]
+    },
+    {
+      "id": "buildings",
+      "title": "Building defs / milestones / unlock conditions / costs",
+      "kind": "code",
+      "authority": [
+        "src/buildings.js"
+      ],
+      "persisted": "state.buildings[key] counts",
+      "mutation": [
+        "src/buildings.js"
+      ],
+      "validation": "tests/regression.test.js (milestone matrix, unlock chain, no-literal-duplication in ui.js)",
+      "notes": "BUILDING_DEFS is the single source of truth. Milestone multipliers 1.15/1.33/1.60 are CALIBRATED (comment: first jump 27-30min, components-500 gap <=8min) — do not retune casually. The regression test asserts the literals never appear in src/ui.js — never inline them.",
+      "resolvedFiles": [
+        "src/buildings.js"
+      ],
+      "missingPaths": [],
+      "systemsTouched": [
+        "buildings"
+      ],
+      "relatedTests": [
+        "tests/dev-infra.test.js",
+        "tests/regression.test.js"
+      ]
+    },
+    {
+      "id": "simulation",
+      "title": "tick() production/consumption/power/food engine",
+      "kind": "code",
+      "authority": [
+        "src/resources.js"
+      ],
+      "persisted": "state.resources + stats (incremental writes only)",
+      "mutation": [
+        "src/resources.js (Game.tick, click economy)"
+      ],
+      "validation": "tests/regression.test.js (milestone production, consumption exemption, power supply/demand)",
+      "notes": "Power is an instantaneous flow, not a stored resource — supply<demand proportionally throttles consumers. Milestone multiplies OUTPUT only, never consumption. Food penalty is a binary threshold (<=0 → ×0.5), not graduated. getBuildingOutputMultiplier is the shared authority — call it, don't reimplement.",
+      "resolvedFiles": [
+        "src/resources.js"
+      ],
+      "missingPaths": [],
+      "systemsTouched": [
+        "simulation"
+      ],
+      "relatedTests": [
+        "tests/dev-infra.test.js",
+        "tests/regression.test.js"
+      ]
+    },
+    {
+      "id": "survivors",
+      "title": "Survivor population + assignment",
+      "kind": "code",
+      "authority": [
+        "src/survivors.js"
+      ],
+      "persisted": "state.survivors.total + assigned",
+      "mutation": [
+        "src/survivors.js"
+      ],
+      "validation": "tests/regression.test.js (via farm unlock + decode invariant); ./dev save-check (assigned>total reset)",
+      "notes": "Pop cap = BASE_POPULATION_CAP + prestige.upgrades.populationCap (state.js constants). decodeSaveCode resets assignments if assigned total exceeds total — preserve that invariant.",
+      "resolvedFiles": [
+        "src/survivors.js"
+      ],
+      "missingPaths": [],
+      "systemsTouched": [
+        "survivors"
+      ],
+      "relatedTests": [
+        "tests/dev-infra.test.js",
+        "tests/regression.test.js"
+      ]
+    },
+    {
+      "id": "prestige",
+      "title": "Escape requirements / planet jump reset / knowledge economy",
+      "kind": "code",
+      "authority": [
+        "src/prestige.js"
+      ],
+      "persisted": "state.prestige.{count,knowledge,upgrades}",
+      "mutation": [
+        "src/prestige.js"
+      ],
+      "validation": "tests/regression.test.js (bottleneck progress ratio, reset to ×1 multipliers, no literal dup in ui.js)",
+      "notes": "ESCAPE_REQUIREMENTS {components:500, metal:800} is the only source — the test forbids the literals in ui.js. Progress display = min(bottleneck ratio). KP = floor(sqrt((components*2+metal)/40)). Carry limit MAX_CARRY_SURVIVORS=3 lives in state.js.",
+      "resolvedFiles": [
+        "src/prestige.js"
+      ],
+      "missingPaths": [],
+      "systemsTouched": [
+        "prestige"
+      ],
+      "relatedTests": [
+        "tests/regression.test.js"
+      ]
+    },
+    {
+      "id": "achievements",
+      "title": "Achievement definitions + unlock checks",
+      "kind": "code",
+      "authority": [
+        "src/achievements.js"
+      ],
+      "persisted": "state.achievements (unlocked flags)",
+      "mutation": [
+        "src/achievements.js"
+      ],
+      "validation": "tests/regression.test.js (checkAchievements stubbed; DOM test asserts log path)",
+      "notes": "Achievements + stats are localStorage-only — deliberately EXCLUDED from the save code (GDD §7/§9 hybrid spec). Do not add them to the codec.",
+      "resolvedFiles": [
+        "src/achievements.js"
+      ],
+      "missingPaths": [],
+      "systemsTouched": [
+        "achievements"
+      ],
+      "relatedTests": [
+        "tests/regression.test.js"
+      ]
+    },
+    {
+      "id": "save-format",
+      "title": "Save persistence — localStorage, normalizeState, save-code codec, offline progress",
+      "kind": "code",
+      "authority": [
+        "src/save.js",
+        "src/state.js"
+      ],
+      "persisted": "localStorage 'ashfall_save_v1' (full) + portable save-code (subset)",
+      "mutation": [
+        "src/save.js (encode/decode/normalize/offline)",
+        "src/state.js (SAVE_KEY, OFFLINE_* caps)"
+      ],
+      "validation": "tests/regression.test.js (normalizeState legacy test); ./dev save-check (codec roundtrip, checksum, version gate, offline caps)",
+      "notes": "normalizeState shallow-merges each section over createInitialState — older saves gain new keys for free. Save-code field count IS the version gate (decodeSaveCode rejects wrong counts). checksum = last '_' + 4 base36 chars. Offline: <5s ignored, capped at OFFLINE_MAX_SECONDS=8h, 30s steps at OFFLINE_EFFICIENCY=0.5.",
+      "resolvedFiles": [
+        "src/save.js",
+        "src/state.js"
+      ],
+      "missingPaths": [],
+      "systemsTouched": [
+        "persistence",
+        "state"
+      ],
+      "relatedTests": [
+        "tests/dev-infra.test.js",
+        "tests/regression.test.js"
+      ]
+    },
+    {
+      "id": "goal",
+      "title": "Next-goal guidance logic (priority semantics)",
+      "kind": "code",
+      "authority": [
+        "src/ui.js"
+      ],
+      "persisted": "never (derived)",
+      "mutation": [
+        "src/ui.js (Game.getNextGoal)"
+      ],
+      "validation": "tests/regression.test.js (unlock>all, jump-KP when able, milestone-vs-escape ratio comparison)",
+      "notes": "QUIRK: goal logic lives in src/ui.js despite being game logic — goal kinds {unlock,milestone,escape,jump} and their priority order are regression-tested. If it moves files, keep the semantics.",
+      "resolvedFiles": [
+        "src/ui.js"
+      ],
+      "missingPaths": [],
+      "systemsTouched": [
+        "ui"
+      ],
+      "relatedTests": [
+        "tests/regression.test.js"
+      ]
+    },
+    {
+      "id": "render",
+      "title": "DOM rendering + element IDs",
+      "kind": "code",
+      "authority": [
+        "index.html",
+        "src/ui.js"
+      ],
+      "persisted": "never",
+      "mutation": [
+        "src/ui.js (initUI/render)"
+      ],
+      "validation": "tests/regression.test.js (DOM stub render smoke; artifact ID-set equality)",
+      "notes": "index.html element ids are the contract — the artifact sync test compares the id sets of index.html and artifact/game.html. Renaming an id requires touching both.",
+      "resolvedFiles": [
+        "index.html",
+        "src/ui.js"
+      ],
+      "missingPaths": [],
+      "systemsTouched": [
+        "shell",
+        "ui"
+      ],
+      "relatedTests": [
+        "tests/dev-infra.test.js",
+        "tests/regression.test.js"
+      ]
+    },
+    {
+      "id": "loop",
+      "title": "Boot + game loop + autosave cadence",
+      "kind": "code",
+      "authority": [
+        "src/main.js",
+        "src/state.js"
+      ],
+      "persisted": "autosave writes state (via save.js)",
+      "mutation": [
+        "src/main.js"
+      ],
+      "validation": "tests/regression.test.js (boot on DOM stub)",
+      "notes": "TICK_INTERVAL_MS=200 doubles as the render interval BY DESIGN (comment: full-DOM rebuild every frame caused lost clicks). dt clamp <5s guards background-tab jumps. AUTOSAVE_INTERVAL_MS=10s in state.js.",
+      "resolvedFiles": [
+        "src/main.js",
+        "src/state.js"
+      ],
+      "missingPaths": [],
+      "systemsTouched": [
+        "runtime",
+        "state"
+      ],
+      "relatedTests": [
+        "tests/dev-infra.test.js",
+        "tests/regression.test.js"
+      ]
+    },
+    {
+      "id": "artifact",
+      "title": "Self-contained artifact bundle",
+      "kind": "code",
+      "authority": [
+        "index.html",
+        "scripts/build-artifact.sh"
+      ],
+      "persisted": "n/a (generated file)",
+      "mutation": [
+        "scripts/build-artifact.sh (regenerate after ANY game change)"
+      ],
+      "validation": "tests/regression.test.js (CSS/JS/id-set byte-level sync)",
+      "notes": "artifact/game.html is GENERATED — never edit directly. index.html <script src> order is the load-order authority the builder consumes. The sync test compares normalized CSS+JS+ids.",
+      "resolvedFiles": [
+        "index.html",
+        "scripts/build-artifact.sh"
+      ],
+      "missingPaths": [],
+      "systemsTouched": [
+        "shell"
+      ],
+      "relatedTests": [
+        "tests/dev-infra.test.js",
+        "tests/regression.test.js"
+      ]
+    },
+    {
+      "id": "script-order",
+      "title": "Module load order",
+      "kind": "code",
+      "authority": [
+        "index.html"
+      ],
+      "persisted": "n/a",
+      "mutation": [
+        "index.html <script src> tags"
+      ],
+      "validation": "tests/regression.test.js (ARTIFACT_ORDER joins the same files; sync test)",
+      "notes": "tests/regression.test.js keeps a PARALLEL copy (SCRIPT_ORDER/ARTIFACT_ORDER) — divergence surfaces via the artifact-sync test but a mismatch in load-order could break the vm harness first. When adding a src file: index.html + SCRIPT_ORDER + artifact regen.",
+      "resolvedFiles": [
+        "index.html"
+      ],
+      "missingPaths": [],
+      "systemsTouched": [
+        "shell"
+      ],
+      "relatedTests": [
+        "tests/dev-infra.test.js",
+        "tests/regression.test.js"
+      ]
+    },
+    {
+      "id": "balance",
+      "title": "Pacing calibration",
+      "kind": "spec",
+      "authority": [
+        "docs/GDD.md",
+        "src/buildings.js"
+      ],
+      "persisted": "n/a",
+      "mutation": [
+        "src/buildings.js (milestone literals)",
+        "src/prestige.js (requirements, KP curve)",
+        "src/survivors.js (accept cost)"
+      ],
+      "validation": "manual play measurement (comment cites measured 27'47\" first jump)",
+      "notes": "GDD §2/§4/§6 is spec authority; the buildings.js comment records real-measured calibration targets. Changing growths/requirements is a balance change — out of scope for infra work.",
+      "resolvedFiles": [
+        "docs/GDD.md",
+        "src/buildings.js"
+      ],
+      "missingPaths": [],
+      "systemsTouched": [
+        "buildings",
+        "docs"
+      ],
+      "relatedTests": [
+        "tests/dev-infra.test.js",
+        "tests/regression.test.js"
+      ]
+    },
+    {
+      "id": "gdd",
+      "title": "Design spec",
+      "kind": "spec",
+      "authority": [
+        "docs/GDD.md"
+      ],
+      "persisted": "n/a",
+      "mutation": [
+        "docs/GDD.md"
+      ],
+      "validation": "code must conform; where code diverges the file comment + tests are the truth",
+      "notes": "GDD documents intent incl. MVP simplifications (power flow, binary food penalty). Where spec and code disagree, check file comments — several simplifications are deliberate.",
+      "resolvedFiles": [
+        "docs/GDD.md"
+      ],
+      "missingPaths": [],
+      "systemsTouched": [
+        "docs"
+      ],
+      "relatedTests": [
+        "tests/dev-infra.test.js"
+      ]
+    }
+  ],
+  "scriptOrder": {
+    "indexHtml": [
+      "src/state.js",
+      "src/buildings.js",
+      "src/resources.js",
+      "src/survivors.js",
+      "src/prestige.js",
+      "src/achievements.js",
+      "src/save.js",
+      "src/ui.js",
+      "src/main.js"
+    ],
+    "testHarness": [
+      "src/state.js",
+      "src/buildings.js",
+      "src/resources.js",
+      "src/survivors.js",
+      "src/prestige.js",
+      "src/achievements.js",
+      "src/save.js",
+      "src/ui.js",
+      "src/main.js"
+    ],
+    "consistent": true
+  },
+  "unmappedFiles": []
+}

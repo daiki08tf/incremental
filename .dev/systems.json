@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "description": "System registry for the generated project map. `paths` are repo-relative prefixes used to bucket files: entries ending in '/' match directories, entries starting with '*.' match by suffix, everything else matches by path prefix. Order matters — first match wins.",
+  "systems": [
+    {
+      "id": "state",
+      "title": "Game state schema + tuning constants + key lists",
+      "paths": ["src/state.js"],
+      "docs": ["docs/GDD.md"],
+      "concepts": ["state", "schema", "constants", "save-key", "keys"]
+    },
+    {
+      "id": "buildings",
+      "title": "BUILDING_DEFS — defs, milestones, unlock conditions, costs",
+      "paths": ["src/buildings.js"],
+      "docs": ["docs/GDD.md"],
+      "concepts": ["building", "milestone", "unlock", "cost", "balance"]
+    },
+    {
+      "id": "simulation",
+      "title": "tick engine — production/consumption/power/food/click",
+      "paths": ["src/resources.js"],
+      "docs": ["docs/GDD.md"],
+      "concepts": ["tick", "production", "power", "food", "click", "economy"]
+    },
+    {
+      "id": "survivors",
+      "title": "Survivor intake + building assignment",
+      "paths": ["src/survivors.js"],
+      "docs": ["docs/GDD.md"],
+      "concepts": ["survivor", "population", "assignment"]
+    },
+    {
+      "id": "prestige",
+      "title": "Planet jump / escape requirements / knowledge upgrades",
+      "paths": ["src/prestige.js"],
+      "docs": ["docs/GDD.md"],
+      "concepts": ["prestige", "escape", "jump", "knowledge", "upgrade"]
+    },
+    {
+      "id": "achievements",
+      "title": "ACHIEVEMENT_DEFS + unlock checks",
+      "paths": ["src/achievements.js"],
+      "docs": ["docs/GDD.md"],
+      "concepts": ["achievement", "unlock"]
+    },
+    {
+      "id": "persistence",
+      "title": "localStorage save + normalizeState + save-code codec + offline progress",
+      "paths": ["src/save.js"],
+      "docs": ["docs/GDD.md"],
+      "concepts": ["save", "savecode", "offline", "migration", "normalize"]
+    },
+    {
+      "id": "ui",
+      "title": "Rendering + getNextGoal + logs (DOM layer)",
+      "paths": ["src/ui.js"],
+      "docs": ["docs/GDD.md"],
+      "concepts": ["ui", "render", "goal", "log"]
+    },
+    {
+      "id": "runtime",
+      "title": "boot + 200ms game loop + autosave",
+      "paths": ["src/main.js"],
+      "docs": [],
+      "concepts": ["boot", "loop", "autosave"]
+    },
+    {
+      "id": "shell",
+      "title": "index.html + style.css + generated artifact bundle",
+      "paths": ["index.html", "style.css", "artifact/", "scripts/build-artifact.sh"],
+      "docs": [],
+      "concepts": ["html", "css", "artifact", "bundle", "script-order"]
+    },
+    {
+      "id": "tests",
+      "title": "Regression suite",
+      "paths": ["tests/"],
+      "docs": [],
+      "concepts": ["tests", "regression"]
+    },
+    {
+      "id": "docs",
+      "title": "GDD + project docs",
+      "paths": ["docs/", "*.md"],
+      "docs": [],
+      "concepts": ["docs", "gdd", "spec"]
+    },
+    {
+      "id": "devtools",
+      "title": "Dev infrastructure",
+      "paths": ["scripts/dev/", "dev", ".dev/"],
+      "docs": ["DEV_INFRA.md"],
+      "concepts": ["tooling", "dev", "infra"]
+    }
+  ]
+}
